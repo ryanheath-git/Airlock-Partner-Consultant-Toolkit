@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Airlock Partner Consulting Tool Kit</title>
+<style>
+  :root {
+    --bg: #12173c;
+    --panel: #1b2358;
+    --border: #333e82;
+    --text: #e8eaf6;
+    --accent: #5b9dff;
+    --error: #ef5546;
+    --muted: #8a91c4;
+    --window-border: rgba(91, 157, 255, 0.55);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+  }
+  header .sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  button#run {
+    background: var(--accent);
+    color: #12173c;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#run:hover { opacity: 0.9; }
+  button#run:disabled { opacity: 0.5; cursor: default; }
+  .actions {
+    display: flex;
+    gap: 10px;
+  }
+  button#compile {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#compile:hover { background: rgba(91, 157, 255, 0.15); }
+  button#compile:disabled { opacity: 0.5; cursor: default; }
+  .status-panel {
+    display: flex;
+    flex-direction: column;
+    border-top: 2px solid var(--window-border);
+    background: var(--panel);
+    padding: 14px 18px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    min-height: 100px;
+    max-height: 260px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .status-panel .status-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .status-panel .status-text { line-height: 1.5; }
+  .status-panel.idle .status-text { color: var(--muted); }
+  .status-panel.pending .status-text { color: var(--muted); }
+  .status-panel.success .status-text { color: var(--accent); }
+  .status-panel.failure .status-text { color: var(--error); }
+  .status-panel a {
+    color: var(--accent);
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .status-panel pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--error);
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+  .status-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button.status-btn {
+    display: none;
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    padding: 7px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.status-btn.show { display: inline-block; }
+  button.status-btn:hover { background: rgba(91, 157, 255, 0.15); }
+  button.status-btn:disabled { opacity: 0.5; cursor: default; }
+  main {
+    flex: 1;
+    display: flex;
+    gap: 14px;
+    padding: 14px;
+    min-height: 0;
+  }
+  main.hidden { display: none; }
+  .pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 2px solid var(--window-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .left-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .apicalls-wrap {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  .apicalls-wrap label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .apicalls-wrap input[type="text"] {
+    background: var(--bg);
+    color: var(--text);
+    border: 2px solid var(--border);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  .apicalls-wrap button {
+    align-self: flex-start;
+    background: var(--accent);
+    color: #12173c;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .apicalls-wrap button:disabled { opacity: 0.5; cursor: default; }
+  .apicalls-wrap .hint {
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .field-status {
+    margin-top: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    min-height: 16px;
+  }
+  .field-status.success { color: var(--accent); }
+  .field-status.failure { color: var(--error); }
+  .radio-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+  .radio-label {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text) !important;
+    margin-bottom: 0 !important;
+    cursor: pointer;
+  }
+  .radio-label input[type="radio"] {
+    accent-color: var(--accent);
+  }
+  .pane-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-bottom: 2px solid var(--window-border);
+    background: var(--panel);
+  }
+  textarea#code {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 14px;
+    tab-size: 4;
+  }
+  #output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #output .stdout { color: var(--text); }
+  #output .stderr { color: var(--error); }
+  #output .meta { color: var(--muted); margin-top: 10px; font-size: 12px; }
+  #output .placeholder { color: var(--muted); font-style: italic; }
+  kbd {
+    background: var(--panel);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 10px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom: 2px solid var(--accent);
+  }
+  .tab-panel { display: none; flex: 1; min-height: 0; }
+  .tab-panel.active { display: flex; }
+  .settings-wrap {
+    padding: 24px 30px;
+    max-width: 1100px;
+    width: 100%;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  .settings-card {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px 20px;
+  }
+  .settings-card h2 { margin-top: 0 !important; }
+
+  /* --- Custom Widgets: Timed Audit Mode --- */
+  .tam-agent-list {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    margin-top: 8px;
+  }
+  .tam-agent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tam-agent-row:last-child { border-bottom: none; }
+  .tam-agent-row input[type="checkbox"] { accent-color: var(--accent); }
+  .tam-agent-row .tam-agent-meta { color: var(--muted); font-size: 11px; margin-left: auto; }
+  .tam-agent-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .tam-session-card {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: var(--bg);
+  }
+  .tam-session-card:last-child { margin-bottom: 0; }
+  .tam-session-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .tam-session-meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .tam-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tam-badge.active { background: rgba(91, 157, 255, 0.2); color: var(--accent); }
+  .tam-badge.reverted { background: rgba(138, 145, 196, 0.2); color: var(--muted); }
+  .tam-badge.revert_failed { background: rgba(239, 85, 70, 0.2); color: var(--error); }
+  .settings-wrap h2 {
+    font-size: 15px;
+    margin: 0 0 4px 0;
+  }
+  .settings-wrap .hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+  }
+  .settings-wrap label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .settings-wrap input[type="password"],
+  .settings-wrap input[type="text"],
+  .settings-wrap select {
+    width: 100%;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    margin-bottom: 14px;
+  }
+  .settings-wrap button {
+    background: var(--accent);
+    color: #12173c;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #settings-status {
+    display: none;
+  }
+  .settings-wrap button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    margin-left: 10px;
+  }
+  .settings-wrap button.secondary:hover { background: rgba(91, 157, 255, 0.15); }
+  .settings-wrap button:disabled { opacity: 0.5; cursor: default; }
+  .key-actions {
+    display: flex;
+    align-items: center;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    accent-color: var(--accent);
+  }
+  .checkbox-row label {
+    margin-bottom: 0 !important;
+    color: var(--text) !important;
+    font-size: 13px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Airlock Partner Consulting Tool Kit</h1>
+    <div class="sub">Runs on your machine only &middot; localhost:5000</div>
+  </div>
+  <div class="actions" id="header-actions">
+    <button id="run">Run</button>
+    <button id="compile">Compile to .exe</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn" data-tab="apicalls">Scripts</button>
+  <button class="tab-btn" data-tab="widgets">Custom Widgets</button>
+  <button class="tab-btn active" data-tab="editor">Editor</button>
+  <button class="tab-btn" data-tab="settings">Settings</button>
+</div>
+
+<main id="main-panel">
+  <div class="pane">
+    <div id="left-editor" class="left-content">
+      <div class="pane-label">Code</div>
+      <textarea id="code" spellcheck="false"># Paste any Python code into this window, then click Run to execute
+# it immediately, or Compile to .exe to build it into a standalone
+# Windows executable.
+
+print("Hello from your local Python runner!")</textarea>
+      <div id="status-panel-editor" class="status-panel idle">
+        <div class="status-label">Status</div>
+        <div class="status-text" id="status-panel-editor-text">No compile actions yet. Click &ldquo;Compile to .exe&rdquo; to build an executable.</div>
+        <div class="status-actions">
+          <button id="vt-upload" class="status-btn">Upload to VirusTotal</button>
+          <button id="vt-open" class="status-btn">Open VirusTotal Results</button>
+        </div>
+      </div>
+    </div>
+    <div id="left-apicalls" class="left-content" style="display:none;">
+      <div class="pane-label">Scripts</div>
+      <div class="apicalls-wrap">
+        <label for="api-script-input">Script &amp; arguments</label>
+        <input type="text" id="api-script-input" list="api-script-list" placeholder="e.g. report.py --user jdoe --verbose" autocomplete="off">
+        <datalist id="api-script-list"></datalist>
+        <button id="api-run">Run script</button>
+        <div id="api-scripts-hint" class="hint"></div>
+      </div>
+      <div id="status-panel-scripts" class="status-panel idle">
+        <div class="status-label">Status</div>
+        <div class="status-text" id="status-panel-scripts-text">No script runs yet. Select a script and click &ldquo;Run script&rdquo;.</div>
+        <div class="status-actions">
+          <button id="api-open-output" class="status-btn">Open output file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pane">
+    <div class="pane-label">Output</div>
+    <div id="output"><span class="placeholder">Output will appear here...</span></div>
+  </div>
+</main>
+
+<div class="tab-panel" id="tab-widgets">
+  <div class="settings-wrap">
+    <div class="settings-grid">
+
+      <div class="settings-card">
+        <h2>Timed Audit Mode</h2>
+        <p class="hint">
+          Move selected agents from one Airlock policy group (usually
+          enforcement) into another (usually audit mode) for a set
+          amount of time, then move them back automatically — even if
+          the app was restarted while the timer was running. Uses your
+          Airlock Digital API key and tenant from Settings.
+        </p>
+
+        <div id="tam-connection-hint" class="hint"></div>
+
+        <p class="hint" style="margin-top: 6px;">
+          <strong>Note:</strong> <code>app.py</code> needs to keep running for scheduled
+          reverts to happen automatically. If it's closed while a timer is running, the
+          revert catches up as soon as you start it again — it won't happen while it's off.
+        </p>
+
+        <label for="tam-source-group">Move agents from</label>
+        <input type="text" id="tam-source-filter" placeholder="Filter groups…" autocomplete="off">
+        <select id="tam-source-group"><option value="">Loading groups…</option></select>
+
+        <label for="tam-dest-group">Move agents to (audit group)</label>
+        <input type="text" id="tam-dest-filter" placeholder="Filter groups…" autocomplete="off">
+        <select id="tam-dest-group"><option value="">Loading groups…</option></select>
+
+        <button id="tam-refresh-groups" class="secondary" type="button">Refresh groups</button>
+
+        <label style="margin-top: 16px; display: block;">Agents in source group</label>
+        <div id="tam-agents-hint" class="hint">Select a source group to load its agents.</div>
+        <div id="tam-agent-list" class="tam-agent-list"></div>
+        <div class="tam-agent-actions">
+          <button id="tam-select-all" class="secondary" type="button">Select all</button>
+          <button id="tam-select-none" class="secondary" type="button">Select none</button>
+        </div>
+
+        <label for="tam-duration" style="margin-top: 16px; display: block;">Duration</label>
+        <select id="tam-duration">
+          <option value="600">10 minutes</option>
+          <option value="1800">30 minutes</option>
+          <option value="3600" selected>1 hour</option>
+          <option value="14400">4 hours</option>
+          <option value="28800">8 hours</option>
+          <option value="86400">24 hours</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="text" id="tam-duration-custom" placeholder="Minutes" style="display:none;" inputmode="numeric">
+
+        <button id="tam-start" style="margin-top: 4px;">Start Timed Audit Mode</button>
+
+        <div id="status-panel-tam" class="status-panel idle" style="margin-top: 16px; border-top: none; border: 2px solid var(--window-border); border-radius: 6px;">
+          <div class="status-label">Status</div>
+          <div class="status-text" id="status-panel-tam-text">No actions yet.</div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h2>Active &amp; Recent Sessions</h2>
+        <p class="hint">Reverts automatically when the timer runs out, as long as <code>app.py</code> is running (catches up on restart if it wasn't). You can also revert a session early.</p>
+        <div id="tam-sessions-list"><p class="hint">No sessions yet.</p></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<div class="tab-panel" id="tab-settings">
+  <div class="settings-wrap">
+    <div class="settings-grid">
+
+      <div class="settings-card">
+        <h2>VirusTotal</h2>
+        <p class="hint">
+          Add your VirusTotal API key to enable uploading compiled .exe
+          files for scanning. Get a free key from your VirusTotal account
+          settings. The key is stored in a local <code>config.json</code>
+          file next to <code>app.py</code> — plaintext, on your machine
+          only.
+        </p>
+        <label for="vt-key-input">API key</label>
+        <input type="password" id="vt-key-input" placeholder="Enter your VirusTotal API key" autocomplete="off">
+        <div class="key-actions">
+          <button id="vt-save">Save key</button>
+          <button id="vt-copy" class="secondary">Copy key</button>
+        </div>
+        <div id="vt-settings-status" class="field-status"></div>
+      </div>
+
+      <div class="settings-card">
+        <h2>Airlock Digital</h2>
+        <p class="hint">
+          Add your Airlock Digital API key and tenant. Scripts you run
+          from the Scripts tab can read them via the
+          <code>AIRLOCK_API_KEY</code> and <code>AIRLOCK_TENANT</code>
+          environment variables (your VirusTotal key is also available,
+          as <code>VT_API_KEY</code>).
+        </p>
+        <label for="airlock-key-input">API key</label>
+        <input type="password" id="airlock-key-input" placeholder="Enter your Airlock Digital API key" autocomplete="off">
+        <div class="key-actions">
+          <button id="airlock-key-save">Save key</button>
+          <button id="airlock-key-copy" class="secondary">Copy key</button>
+        </div>
+        <label for="airlock-tenant-input" style="margin-top: 10px;">Tenant</label>
+        <input type="text" id="airlock-tenant-input" placeholder="Enter your Airlock Digital tenant" autocomplete="off">
+        <label for="airlock-port-input" style="margin-top: 10px;">Port</label>
+        <input type="text" id="airlock-port-input" placeholder="Default: 3129" autocomplete="off" inputmode="numeric">
+        <button id="airlock-tenant-save">Save tenant &amp; port</button>
+        <div id="airlock-settings-status" class="field-status"></div>
+      </div>
+
+      <div class="settings-card">
+        <h2>Script folder &amp; execution</h2>
+        <p class="hint">
+          Where the app looks for your Airlock Digital Python scripts
+          (listed in the Scripts tab). Scripts always run from this
+          local folder.
+        </p>
+        <label for="scripts-dir-input">Folder path</label>
+        <input type="text" id="scripts-dir-input" placeholder="e.g. C:\Users\you\airlock-scripts" autocomplete="off">
+        <p class="hint">Leave blank to use the default <code>api_scripts</code> folder next to <code>app.py</code>.</p>
+
+        <label for="scripts-timeout-input">Execution timeout (seconds)</label>
+        <input type="text" id="scripts-timeout-input" placeholder="120" autocomplete="off" inputmode="numeric">
+        <p class="hint">How long a script is allowed to run before it's stopped. Applies to scripts run from the Scripts tab.</p>
+
+        <button id="scripts-dir-save">Save script settings</button>
+        <div id="scripts-dir-settings-status" class="field-status"></div>
+      </div>
+
+      <div class="settings-card">
+        <h2>GitHub sync</h2>
+        <p class="hint">
+          Optionally sync <code>.py</code> files from a GitHub repo into
+          the script folder above. Sync runs automatically on startup
+          when enabled, and can be triggered manually any time. Other
+          files already in the folder are left untouched.
+        </p>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="github-sync-enabled">
+          <label for="github-sync-enabled">Enable GitHub sync</label>
+        </div>
+
+        <div id="github-sync-fields">
+          <label for="github-repo-input">Repository</label>
+          <input type="text" id="github-repo-input" placeholder="owner/repo or https://github.com/owner/repo" autocomplete="off">
+          <label for="github-branch-input">Branch</label>
+          <input type="text" id="github-branch-input" placeholder="main" autocomplete="off">
+          <label for="github-subdir-input">Subfolder in repo (optional)</label>
+          <input type="text" id="github-subdir-input" placeholder="e.g. scripts" autocomplete="off">
+          <label for="github-token-input">Personal access token (optional — only needed for private repos)</label>
+          <input type="password" id="github-token-input" placeholder="Leave blank if the repo is public" autocomplete="off">
+        </div>
+
+        <button id="github-sync-save">Save GitHub sync settings</button>
+        <button id="github-sync-now" class="secondary">Sync now</button>
+        <div id="github-sync-settings-status" class="field-status"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const codeEl = document.getElementById("code");
+const outputEl = document.getElementById("output");
+const runBtn = document.getElementById("run");
+const compileBtn = document.getElementById("compile");
+const statusPanelEditorEl = document.getElementById("status-panel-editor");
+const statusPanelEditorTextEl = document.getElementById("status-panel-editor-text");
+const vtUploadBtn = document.getElementById("vt-upload");
+const vtOpenBtn = document.getElementById("vt-open");
+let currentVtUrl = "";
+
+const statusPanelScriptsEl = document.getElementById("status-panel-scripts");
+const statusPanelScriptsTextEl = document.getElementById("status-panel-scripts-text");
+
+const mainPanel = document.getElementById("main-panel");
+const headerActions = document.getElementById("header-actions");
+const leftEditor = document.getElementById("left-editor");
+const leftApicalls = document.getElementById("left-apicalls");
+const apiScriptInput = document.getElementById("api-script-input");
+const apiScriptList = document.getElementById("api-script-list");
+const apiRunBtn = document.getElementById("api-run");
+const apiScriptsHint = document.getElementById("api-scripts-hint");
+const apiOpenOutputBtn = document.getElementById("api-open-output");
+
+const vtKeyInput = document.getElementById("vt-key-input");
+const vtSaveBtn = document.getElementById("vt-save");
+const vtCopyBtn = document.getElementById("vt-copy");
+const vtStatusEl = document.getElementById("vt-settings-status");
+const airlockKeyInput = document.getElementById("airlock-key-input");
+const airlockTenantInput = document.getElementById("airlock-tenant-input");
+const airlockPortInput = document.getElementById("airlock-port-input");
+const airlockKeySaveBtn = document.getElementById("airlock-key-save");
+const airlockKeyCopyBtn = document.getElementById("airlock-key-copy");
+const airlockTenantSaveBtn = document.getElementById("airlock-tenant-save");
+const airlockStatusEl = document.getElementById("airlock-settings-status");
+
+const scriptsDirInput = document.getElementById("scripts-dir-input");
+const scriptsTimeoutInput = document.getElementById("scripts-timeout-input");
+const scriptsDirSaveBtn = document.getElementById("scripts-dir-save");
+const scriptsDirStatusEl = document.getElementById("scripts-dir-settings-status");
+
+const githubSyncEnabledCheckbox = document.getElementById("github-sync-enabled");
+const githubSyncFields = document.getElementById("github-sync-fields");
+const githubRepoInput = document.getElementById("github-repo-input");
+const githubBranchInput = document.getElementById("github-branch-input");
+const githubSubdirInput = document.getElementById("github-subdir-input");
+const githubTokenInput = document.getElementById("github-token-input");
+const githubSyncSaveBtn = document.getElementById("github-sync-save");
+const githubSyncNowBtn = document.getElementById("github-sync-now");
+const githubSyncStatusEl = document.getElementById("github-sync-settings-status");
+
+let lastCompiledFilename = null;
+let lastOutputFilePath = null;
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Renders the {stdout, stderr, exit_code, timed_out, error} shape returned
+// by /run and /api_scripts/run into the shared output pane.
+function renderRunResult(data) {
+  if (data.error) {
+    outputEl.innerHTML = `<span class="stderr">${escapeHtml(data.error)}</span>`;
+    return;
+  }
+  let html = "";
+  if (data.stdout) html += `<span class="stdout">${escapeHtml(data.stdout)}</span>`;
+  if (data.stderr) html += `<span class="stderr">${escapeHtml(data.stderr)}</span>`;
+  if (!data.stdout && !data.stderr) html = `<span class="placeholder">(no output)</span>`;
+  html += `<div class="meta">Exit code: ${data.exit_code === null ? "killed (timeout)" : data.exit_code}</div>`;
+  outputEl.innerHTML = html;
+}
+
+// Basic tab-key support in the code textarea
+codeEl.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const start = codeEl.selectionStart;
+    const end = codeEl.selectionEnd;
+    codeEl.value = codeEl.value.slice(0, start) + "    " + codeEl.value.slice(end);
+    codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+  }
+});
+codeEl.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    runCode();
+  }
+});
+
+async function runCode() {
+  const code = codeEl.value;
+  runBtn.disabled = true;
+  runBtn.textContent = "Running...";
+  outputEl.innerHTML = "";
+
+  try {
+    const res = await fetch("/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    renderRunResult(await res.json());
+  } catch (err) {
+    outputEl.innerHTML = `<span class="stderr">Request failed: ${escapeHtml(String(err))}</span>`;
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = "Run";
+  }
+}
+
+runBtn.addEventListener("click", runCode);
+
+async function runCompile() {
+  const code = codeEl.value;
+  compileBtn.disabled = true;
+  compileBtn.textContent = "Compiling...";
+  statusPanelEditorEl.className = "status-panel pending";
+  statusPanelEditorTextEl.innerHTML = "Compiling — this can take a while the first time...";
+  vtUploadBtn.classList.remove("show");
+  vtOpenBtn.classList.remove("show");
+  currentVtUrl = "";
+  lastCompiledFilename = null;
+
+  try {
+    const res = await fetch("/compile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      statusPanelEditorEl.className = "status-panel success";
+      statusPanelEditorTextEl.innerHTML =
+        `Compilation complete &mdash; <code>${escapeHtml(data.filename)}</code>` +
+        `<a href="${data.download_url}" download>Download .exe</a>`;
+      lastCompiledFilename = data.filename;
+      vtUploadBtn.classList.add("show");
+    } else {
+      statusPanelEditorEl.className = "status-panel failure";
+      let html = `Compilation failed${data.error ? ": " + escapeHtml(data.error) : ""}`;
+      const log = (data.stderr || "") || (data.stdout || "");
+      if (log) html += `<pre>${escapeHtml(log)}</pre>`;
+      statusPanelEditorTextEl.innerHTML = html;
+    }
+  } catch (err) {
+    statusPanelEditorEl.className = "status-panel failure";
+    statusPanelEditorTextEl.innerHTML = `Request failed: ${escapeHtml(String(err))}`;
+  } finally {
+    compileBtn.disabled = false;
+    compileBtn.textContent = "Compile to .exe";
+  }
+}
+
+compileBtn.addEventListener("click", runCompile);
+
+async function uploadToVirusTotal() {
+  if (!lastCompiledFilename) return;
+
+  vtUploadBtn.disabled = true;
+  vtUploadBtn.textContent = "Uploading...";
+  vtOpenBtn.classList.remove("show");
+  currentVtUrl = "";
+
+  try {
+    const res = await fetch("/virustotal/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: lastCompiledFilename }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      currentVtUrl = data.vt_url;
+      statusPanelEditorTextEl.innerHTML += `<div class="meta">Uploaded to VirusTotal &mdash; analysis in progress. Click "Open VirusTotal Results" to view it.</div>`;
+      vtOpenBtn.classList.add("show");
+    } else {
+      statusPanelEditorTextEl.innerHTML += `<div class="meta" style="color: var(--error);">VirusTotal upload failed: ${escapeHtml(data.error || "unknown error")}</div>`;
+    }
+  } catch (err) {
+    statusPanelEditorTextEl.innerHTML += `<div class="meta" style="color: var(--error);">VirusTotal request failed: ${escapeHtml(String(err))}</div>`;
+  } finally {
+    vtUploadBtn.disabled = false;
+    vtUploadBtn.textContent = "Upload to VirusTotal";
+  }
+}
+
+function openVirusTotalResults() {
+  if (!currentVtUrl) return;
+  window.open(currentVtUrl, "_blank");
+}
+
+vtUploadBtn.addEventListener("click", uploadToVirusTotal);
+vtOpenBtn.addEventListener("click", openVirusTotalResults);
+
+// --- Scripts tab ---
+async function loadApiScripts() {
+  apiScriptList.innerHTML = "";
+  apiScriptsHint.textContent = "Loading...";
+  try {
+    const res = await fetch("/api_scripts");
+    const data = await res.json();
+
+    if (data.error) {
+      apiScriptsHint.textContent = data.error;
+      return;
+    }
+
+    if (!data.scripts || data.scripts.length === 0) {
+      apiScriptsHint.textContent = `No scripts found in: ${data.location}`;
+    } else {
+      apiScriptList.innerHTML = data.scripts
+        .map((name) => `<option value="${escapeHtml(name)}">`)
+        .join("");
+      apiScriptsHint.textContent = `Reading from: ${data.location}`;
+    }
+  } catch (err) {
+    apiScriptsHint.textContent = `Request failed: ${err}`;
+  }
+}
+
+async function runApiScript() {
+  const script = apiScriptInput.value.trim();
+  if (!script) return;
+
+  apiRunBtn.disabled = true;
+  apiRunBtn.textContent = "Running...";
+  outputEl.innerHTML = "";
+  apiOpenOutputBtn.classList.remove("show");
+  lastOutputFilePath = null;
+  statusPanelScriptsEl.className = "status-panel pending";
+  statusPanelScriptsTextEl.innerHTML = `Running <code>${escapeHtml(script)}</code>...`;
+
+  try {
+    const res = await fetch("/api_scripts/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ script }),
+    });
+    const data = await res.json();
+    renderRunResult(data);
+
+    if (data.error) {
+      statusPanelScriptsEl.className = "status-panel failure";
+      statusPanelScriptsTextEl.innerHTML = escapeHtml(data.error);
+    } else if (data.timed_out) {
+      statusPanelScriptsEl.className = "status-panel failure";
+      statusPanelScriptsTextEl.innerHTML = "Script timed out.";
+    } else if (data.exit_code === 0) {
+      statusPanelScriptsEl.className = "status-panel success";
+      statusPanelScriptsTextEl.innerHTML = "Script completed successfully (exit code 0).";
+    } else {
+      statusPanelScriptsEl.className = "status-panel failure";
+      statusPanelScriptsTextEl.innerHTML = `Script exited with code ${data.exit_code}.`;
+    }
+
+    if (data.output_file) {
+      lastOutputFilePath = data.output_file;
+      apiOpenOutputBtn.textContent = `Open output file (${data.output_filename})`;
+      apiOpenOutputBtn.classList.add("show");
+    }
+  } catch (err) {
+    statusPanelScriptsEl.className = "status-panel failure";
+    statusPanelScriptsTextEl.innerHTML = `Request failed: ${escapeHtml(String(err))}`;
+    outputEl.innerHTML = `<span class="stderr">Request failed: ${escapeHtml(String(err))}</span>`;
+  } finally {
+    apiRunBtn.disabled = false;
+    apiRunBtn.textContent = "Run script";
+  }
+}
+
+apiRunBtn.addEventListener("click", runApiScript);
+
+async function openOutputFile() {
+  if (!lastOutputFilePath) return;
+
+  apiOpenOutputBtn.disabled = true;
+
+  try {
+    const res = await fetch("/open_file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: lastOutputFilePath }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      statusPanelScriptsTextEl.innerHTML += `<div class="meta">Opened the output file.</div>`;
+    } else {
+      statusPanelScriptsTextEl.innerHTML += `<div class="meta" style="color: var(--error);">${escapeHtml(data.error || "Couldn't open the file.")}</div>`;
+    }
+  } catch (err) {
+    statusPanelScriptsTextEl.innerHTML += `<div class="meta" style="color: var(--error);">Request failed: ${escapeHtml(String(err))}</div>`;
+  } finally {
+    apiOpenOutputBtn.disabled = false;
+  }
+}
+
+apiOpenOutputBtn.addEventListener("click", openOutputFile);
+
+// --- Tabs ---
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const tab = btn.dataset.tab;
+    const fullWidthTabs = { settings: "tab-settings", widgets: "tab-widgets" };
+
+    Object.values(fullWidthTabs).forEach((id) => document.getElementById(id).classList.remove("active"));
+    headerActions.style.display = tab === "editor" ? "flex" : "none";
+
+    if (fullWidthTabs[tab]) {
+      mainPanel.classList.add("hidden");
+      document.getElementById(fullWidthTabs[tab]).classList.add("active");
+    } else {
+      mainPanel.classList.remove("hidden");
+      leftEditor.style.display = tab === "editor" ? "flex" : "none";
+      leftApicalls.style.display = tab === "apicalls" ? "flex" : "none";
+      if (tab === "apicalls") loadApiScripts();
+    }
+
+    if (tab === "widgets") initTimedAuditModeTab();
+  });
+});
+
+// --- Settings ---
+function showGithubSyncFields(enabled) {
+  githubSyncFields.style.display = enabled ? "block" : "none";
+}
+
+githubSyncEnabledCheckbox.addEventListener("change", () => {
+  showGithubSyncFields(githubSyncEnabledCheckbox.checked);
+});
+
+async function loadSettings() {
+  try {
+    const res = await fetch("/config");
+    const data = await res.json();
+    if (data.vt_api_key && data.vt_api_key.has_key) {
+      vtKeyInput.placeholder = `Saved key: ${data.vt_api_key.key_preview}`;
+    }
+    if (data.airlock_api_key && data.airlock_api_key.has_key) {
+      airlockKeyInput.placeholder = `Saved key: ${data.airlock_api_key.key_preview}`;
+    }
+    airlockTenantInput.value = data.airlock_tenant || "";
+    airlockPortInput.value = data.airlock_port || "";
+
+    scriptsDirInput.value = data.api_scripts_dir || "";
+    scriptsDirInput.placeholder = `Default: ${data.api_scripts_dir_resolved || "api_scripts"}`;
+    scriptsTimeoutInput.value = data.api_script_timeout || "";
+    scriptsTimeoutInput.placeholder = `Default: ${data.api_script_timeout_resolved || 120}`;
+
+    githubSyncEnabledCheckbox.checked = !!data.github_sync_enabled;
+    showGithubSyncFields(githubSyncEnabledCheckbox.checked);
+
+    githubRepoInput.value = data.github_repo || "";
+    githubBranchInput.value = data.github_branch || "";
+    githubSubdirInput.value = data.github_subdir || "";
+    if (data.github_token && data.github_token.has_key) {
+      githubTokenInput.placeholder = `Saved token: ${data.github_token.key_preview}`;
+    }
+  } catch (err) {
+    // Non-critical — settings tab just won't show saved-value hints.
+  }
+}
+
+async function saveConfigField(field, value, statusEl, button, buttonDefaultText) {
+  button.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, value }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      statusEl.className = "field-status success";
+      statusEl.textContent = data.key_preview ? `Saved (${data.key_preview}).` : "Saved.";
+      return data;
+    } else {
+      statusEl.className = "field-status failure";
+      statusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = buttonDefaultText;
+  }
+  return null;
+}
+
+vtSaveBtn.addEventListener("click", async () => {
+  const value = vtKeyInput.value.trim();
+  if (!value) {
+    vtStatusEl.className = "field-status failure";
+    vtStatusEl.textContent = "Enter an API key first.";
+    return;
+  }
+  const data = await saveConfigField("vt_api_key", value, vtStatusEl, vtSaveBtn, "Save key");
+  if (data) {
+    vtKeyInput.value = "";
+    vtKeyInput.placeholder = `Saved key: ${data.key_preview}`;
+  }
+});
+
+airlockKeySaveBtn.addEventListener("click", async () => {
+  const value = airlockKeyInput.value.trim();
+  if (!value) {
+    airlockStatusEl.className = "field-status failure";
+    airlockStatusEl.textContent = "Enter an API key first.";
+    return;
+  }
+  const data = await saveConfigField("airlock_api_key", value, airlockStatusEl, airlockKeySaveBtn, "Save key");
+  if (data) {
+    airlockKeyInput.value = "";
+    airlockKeyInput.placeholder = `Saved key: ${data.key_preview}`;
+  }
+});
+
+airlockTenantSaveBtn.addEventListener("click", async () => {
+  const tenantValue = airlockTenantInput.value.trim();
+  const portValue = airlockPortInput.value.trim();
+
+  if (portValue && (!/^\d+$/.test(portValue) || parseInt(portValue, 10) < 1 || parseInt(portValue, 10) > 65535)) {
+    airlockStatusEl.className = "field-status failure";
+    airlockStatusEl.textContent = "Port must be a whole number between 1 and 65535.";
+    return;
+  }
+
+  airlockTenantSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: { airlock_tenant: tenantValue, airlock_port: portValue } }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      airlockStatusEl.className = "field-status success";
+      airlockStatusEl.textContent = "Saved.";
+    } else {
+      airlockStatusEl.className = "field-status failure";
+      airlockStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    airlockStatusEl.className = "field-status failure";
+    airlockStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    airlockTenantSaveBtn.disabled = false;
+  }
+});
+
+async function copySavedKey(field, inputEl, statusEl, button) {
+  let value = inputEl.value.trim();
+
+  if (!value) {
+    try {
+      const res = await fetch("/config/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field }),
+      });
+      const data = await res.json();
+      if (!data.value) {
+        statusEl.className = "field-status failure";
+        statusEl.textContent = data.error || "No saved key to copy.";
+        return;
+      }
+      value = data.value;
+    } catch (err) {
+      statusEl.className = "field-status failure";
+      statusEl.textContent = `Request failed: ${err}`;
+      return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    statusEl.className = "field-status success";
+    statusEl.textContent = "Copied to clipboard.";
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    setTimeout(() => { button.textContent = original; }, 1500);
+  } catch (err) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = "Couldn't copy — clipboard access blocked by the browser.";
+  }
+}
+
+vtCopyBtn.addEventListener("click", () => copySavedKey("vt_api_key", vtKeyInput, vtStatusEl, vtCopyBtn));
+airlockKeyCopyBtn.addEventListener("click", () => copySavedKey("airlock_api_key", airlockKeyInput, airlockStatusEl, airlockKeyCopyBtn));
+
+scriptsDirSaveBtn.addEventListener("click", async () => {
+  const timeoutRaw = scriptsTimeoutInput.value.trim();
+  if (timeoutRaw && (!/^\d+$/.test(timeoutRaw) || parseInt(timeoutRaw, 10) < 1)) {
+    scriptsDirStatusEl.className = "field-status failure";
+    scriptsDirStatusEl.textContent = "Timeout must be a whole number of seconds (1 or greater).";
+    return;
+  }
+
+  const fields = { api_scripts_dir: scriptsDirInput.value.trim() };
+  if (timeoutRaw) fields.api_script_timeout = timeoutRaw;
+
+  scriptsDirSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      scriptsDirStatusEl.className = "field-status success";
+      scriptsDirStatusEl.textContent =
+        `Saved. Using folder: ${data.api_scripts_dir_resolved}, timeout: ${data.api_script_timeout_resolved}s.`;
+    } else {
+      scriptsDirStatusEl.className = "field-status failure";
+      scriptsDirStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    scriptsDirStatusEl.className = "field-status failure";
+    scriptsDirStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    scriptsDirSaveBtn.disabled = false;
+  }
+});
+
+githubSyncSaveBtn.addEventListener("click", async () => {
+  const enabled = githubSyncEnabledCheckbox.checked;
+  const fields = { github_sync_enabled: enabled ? "true" : "false" };
+
+  if (enabled) {
+    const repo = githubRepoInput.value.trim();
+    if (!repo) {
+      githubSyncStatusEl.className = "field-status failure";
+      githubSyncStatusEl.textContent = "Enter a GitHub repo first.";
+      return;
+    }
+    fields.github_repo = repo;
+    fields.github_branch = githubBranchInput.value.trim() || "main";
+    fields.github_subdir = githubSubdirInput.value.trim();
+    // Only send the token if the user typed a new one — leaving it blank
+    // keeps whatever token (if any) is already saved.
+    const token = githubTokenInput.value.trim();
+    if (token) fields.github_token = token;
+  }
+
+  githubSyncSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      githubSyncStatusEl.className = "field-status success";
+      githubSyncStatusEl.textContent = "Saved.";
+      if (fields.github_token) {
+        githubTokenInput.value = "";
+        githubTokenInput.placeholder = `Saved token: ${data.key_previews ? data.key_previews.github_token : ""}`;
+      }
+    } else {
+      githubSyncStatusEl.className = "field-status failure";
+      githubSyncStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    githubSyncStatusEl.className = "field-status failure";
+    githubSyncStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    githubSyncSaveBtn.disabled = false;
+  }
+});
+
+githubSyncNowBtn.addEventListener("click", async () => {
+  githubSyncNowBtn.disabled = true;
+  githubSyncNowBtn.textContent = "Syncing...";
+  try {
+    const res = await fetch("/sync", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      githubSyncStatusEl.className = "field-status success";
+      const count = data.downloaded ? data.downloaded.length : 0;
+      githubSyncStatusEl.textContent = `Synced ${count} script(s) from ${data.location}.`;
+      if (data.errors && data.errors.length) {
+        githubSyncStatusEl.textContent += ` (${data.errors.length} file(s) failed)`;
+      }
+      if (document.getElementById("tab-apicalls") || leftApicalls.style.display !== "none") {
+        loadApiScripts();
+      }
+    } else {
+      githubSyncStatusEl.className = "field-status failure";
+      githubSyncStatusEl.textContent = data.error || "Sync failed.";
+    }
+  } catch (err) {
+    githubSyncStatusEl.className = "field-status failure";
+    githubSyncStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    githubSyncNowBtn.disabled = false;
+    githubSyncNowBtn.textContent = "Sync now";
+  }
+});
+
+// --- Custom Widgets: Timed Audit Mode ---
+const tamConnectionHint = document.getElementById("tam-connection-hint");
+const tamSourceFilterInput = document.getElementById("tam-source-filter");
+const tamDestFilterInput = document.getElementById("tam-dest-filter");
+const tamSourceGroupSelect = document.getElementById("tam-source-group");
+const tamDestGroupSelect = document.getElementById("tam-dest-group");
+const tamRefreshGroupsBtn = document.getElementById("tam-refresh-groups");
+const tamAgentsHint = document.getElementById("tam-agents-hint");
+const tamAgentList = document.getElementById("tam-agent-list");
+const tamSelectAllBtn = document.getElementById("tam-select-all");
+const tamSelectNoneBtn = document.getElementById("tam-select-none");
+const tamDurationSelect = document.getElementById("tam-duration");
+const tamDurationCustom = document.getElementById("tam-duration-custom");
+const tamStartBtn = document.getElementById("tam-start");
+const tamStatusEl = document.getElementById("status-panel-tam");
+const tamStatusTextEl = document.getElementById("status-panel-tam-text");
+const tamSessionsList = document.getElementById("tam-sessions-list");
+
+let tamInitialized = false;
+let tamPollHandle = null;
+let tamCurrentAgents = []; // [{agentid, hostname, username, os}]
+let tamAllGroups = []; // [{groupid, name}] — full unfiltered list, for client-side search
+
+function tamSetStatus(kind, html) {
+  tamStatusEl.className = `status-panel ${kind}`;
+  tamStatusTextEl.innerHTML = html;
+}
+
+function tamGroupOptionsHtml(groups) {
+  return (
+    `<option value="">Select a group…</option>` +
+    groups.map((g) => `<option value="${escapeHtml(g.groupid)}" data-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</option>`).join("")
+  );
+}
+
+// Rebuilds a <select>'s options from tamAllGroups filtered by `query`,
+// preserving the current selection if it still matches the filter.
+function tamRenderFilteredGroups(selectEl, query) {
+  const previousValue = selectEl.value;
+  const q = query.trim().toLowerCase();
+  const filtered = q ? tamAllGroups.filter((g) => g.name.toLowerCase().includes(q)) : tamAllGroups;
+  selectEl.innerHTML = tamGroupOptionsHtml(filtered);
+  if (previousValue && filtered.some((g) => g.groupid === previousValue)) {
+    selectEl.value = previousValue;
+  }
+}
+
+tamSourceFilterInput.addEventListener("input", () => tamRenderFilteredGroups(tamSourceGroupSelect, tamSourceFilterInput.value));
+tamDestFilterInput.addEventListener("input", () => tamRenderFilteredGroups(tamDestGroupSelect, tamDestFilterInput.value));
+
+async function tamLoadGroups() {
+  tamSourceGroupSelect.innerHTML = `<option value="">Loading groups…</option>`;
+  tamDestGroupSelect.innerHTML = `<option value="">Loading groups…</option>`;
+  tamConnectionHint.textContent = "";
+  tamAllGroups = [];
+
+  try {
+    const res = await fetch("/airlock/groups");
+    const data = await res.json();
+
+    if (data.error) {
+      tamSourceGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+      tamDestGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+      tamConnectionHint.textContent = data.error;
+      return;
+    }
+
+    const groups = data.groups || [];
+    if (groups.length === 0) {
+      tamSourceGroupSelect.innerHTML = `<option value="">No groups found</option>`;
+      tamDestGroupSelect.innerHTML = `<option value="">No groups found</option>`;
+      if (data.raw_sample) {
+        tamConnectionHint.innerHTML =
+          `Connected, and Airlock returned data, but it didn't match the fields this app expects. ` +
+          `Raw sample of one group so we can fix the field mapping:<br>` +
+          `<code style="display:block; white-space:pre-wrap; margin-top:6px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 11px;">${escapeHtml(JSON.stringify(data.raw_sample, null, 2))}</code>`;
+      } else {
+        tamConnectionHint.textContent = "Connected, but this API key has no visible policy groups.";
+      }
+      return;
+    }
+
+    tamAllGroups = groups;
+    tamSourceFilterInput.value = "";
+    tamDestFilterInput.value = "";
+    tamSourceGroupSelect.innerHTML = tamGroupOptionsHtml(groups);
+    tamDestGroupSelect.innerHTML = tamGroupOptionsHtml(groups);
+    tamConnectionHint.textContent = `${groups.length} group(s) loaded.`;
+  } catch (err) {
+    tamSourceGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+    tamDestGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+    tamConnectionHint.textContent = `Request failed: ${err}`;
+  }
+}
+
+function tamSelectedGroupName(selectEl) {
+  const opt = selectEl.options[selectEl.selectedIndex];
+  return opt ? opt.dataset.name || opt.textContent : "";
+}
+
+async function tamLoadAgents() {
+  const groupid = tamSourceGroupSelect.value;
+  tamCurrentAgents = [];
+  tamAgentList.innerHTML = "";
+
+  if (!groupid) {
+    tamAgentsHint.textContent = "Select a source group to load its agents.";
+    return;
+  }
+
+  tamAgentsHint.textContent = "Loading agents…";
+
+  try {
+    const res = await fetch("/airlock/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupid }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      tamAgentsHint.textContent = data.error;
+      return;
+    }
+
+    tamCurrentAgents = data.agents || [];
+    if (tamCurrentAgents.length === 0) {
+      if (data.raw_sample) {
+        tamAgentsHint.innerHTML =
+          `Connected, and Airlock returned data, but it didn't match the fields this app expects. ` +
+          `Raw sample so we can fix the field mapping:<br>` +
+          `<code style="display:block; white-space:pre-wrap; margin-top:6px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 11px;">${escapeHtml(JSON.stringify(data.raw_sample, null, 2))}</code>`;
+      } else {
+        tamAgentsHint.textContent = "No agents currently in this group.";
+      }
+      return;
+    }
+
+    tamAgentsHint.textContent = `${tamCurrentAgents.length} agent(s) in this group.`;
+    tamAgentList.innerHTML = tamCurrentAgents
+      .map(
+        (a) => `
+        <label class="tam-agent-row">
+          <input type="checkbox" class="tam-agent-checkbox" value="${escapeHtml(a.agentid)}" data-hostname="${escapeHtml(a.hostname)}">
+          ${escapeHtml(a.hostname)}
+          <span class="tam-agent-meta">${escapeHtml(a.username || "")} ${escapeHtml(a.os || "")}</span>
+        </label>`
+      )
+      .join("");
+  } catch (err) {
+    tamAgentsHint.textContent = `Request failed: ${err}`;
+  }
+}
+
+tamSourceGroupSelect.addEventListener("change", tamLoadAgents);
+tamRefreshGroupsBtn.addEventListener("click", async () => {
+  await tamLoadGroups();
+  if (tamSourceGroupSelect.value) await tamLoadAgents();
+});
+
+tamSelectAllBtn.addEventListener("click", () => {
+  tamAgentList.querySelectorAll(".tam-agent-checkbox").forEach((cb) => (cb.checked = true));
+});
+tamSelectNoneBtn.addEventListener("click", () => {
+  tamAgentList.querySelectorAll(".tam-agent-checkbox").forEach((cb) => (cb.checked = false));
+});
+
+tamDurationSelect.addEventListener("change", () => {
+  tamDurationCustom.style.display = tamDurationSelect.value === "custom" ? "block" : "none";
+});
+
+function tamGetDurationSeconds() {
+  if (tamDurationSelect.value === "custom") {
+    const minutes = parseInt(tamDurationCustom.value.trim(), 10);
+    if (!minutes || minutes <= 0) return null;
+    return minutes * 60;
+  }
+  return parseInt(tamDurationSelect.value, 10);
+}
+
+async function tamStartSession() {
+  const sourceGroupid = tamSourceGroupSelect.value;
+  const destGroupid = tamDestGroupSelect.value;
+  const sourceGroupName = tamSelectedGroupName(tamSourceGroupSelect);
+  const destGroupName = tamSelectedGroupName(tamDestGroupSelect);
+  const checked = Array.from(tamAgentList.querySelectorAll(".tam-agent-checkbox:checked"));
+  const durationSeconds = tamGetDurationSeconds();
+
+  if (!sourceGroupid || !destGroupid) {
+    tamSetStatus("failure", "Select both a source and destination group.");
+    return;
+  }
+  if (sourceGroupid === destGroupid) {
+    tamSetStatus("failure", "Source and destination groups must be different.");
+    return;
+  }
+  if (checked.length === 0) {
+    tamSetStatus("failure", "Select at least one agent to move.");
+    return;
+  }
+  if (!durationSeconds) {
+    tamSetStatus("failure", "Enter a valid duration.");
+    return;
+  }
+
+  const agentIds = checked.map((cb) => cb.value);
+  const agentLabels = checked.map((cb) => cb.dataset.hostname);
+
+  tamStartBtn.disabled = true;
+  tamStartBtn.textContent = "Starting…";
+  tamSetStatus("pending", `Moving ${agentIds.length} agent(s) to "${escapeHtml(destGroupName)}"...`);
+
+  try {
+    const res = await fetch("/audit/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_groupid: sourceGroupid,
+        source_group_name: sourceGroupName,
+        dest_groupid: destGroupid,
+        dest_group_name: destGroupName,
+        agent_ids: agentIds,
+        agent_labels: agentLabels,
+        duration_seconds: durationSeconds,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      tamSetStatus(
+        "success",
+        `Moved ${agentIds.length} agent(s) to "${escapeHtml(destGroupName)}". They'll move back to "${escapeHtml(sourceGroupName)}" automatically when the timer runs out.`
+      );
+      tamLoadSessions();
+      tamLoadAgents(); // refresh — the moved agents no longer belong to the source group
+    } else {
+      tamSetStatus("failure", escapeHtml(data.error || "Failed to start."));
+    }
+  } catch (err) {
+    tamSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    tamStartBtn.disabled = false;
+    tamStartBtn.textContent = "Start Timed Audit Mode";
+  }
+}
+
+tamStartBtn.addEventListener("click", tamStartSession);
+
+function tamFormatRemaining(expiresAt) {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return "reverting…";
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}h ${m}m remaining`;
+  if (m > 0) return `${m}m ${s}s remaining`;
+  return `${s}s remaining`;
+}
+
+function tamRenderSessions(sessions) {
+  if (!sessions || sessions.length === 0) {
+    tamSessionsList.innerHTML = `<p class="hint">No sessions yet.</p>`;
+    return;
+  }
+
+  // Most recent first.
+  const sorted = [...sessions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  tamSessionsList.innerHTML = sorted
+    .map((s) => {
+      const badge = `<span class="tam-badge ${s.status}">${s.status.replace("_", " ")}</span>`;
+      const agentCount = (s.agent_labels || s.agent_ids || []).length;
+      const agentNames = (s.agent_labels || s.agent_ids || []).join(", ");
+      const timing =
+        s.status === "active"
+          ? tamFormatRemaining(s.expires_at)
+          : s.status === "revert_failed"
+          ? `Revert failed: ${escapeHtml(s.revert_error || "unknown error")} — retrying`
+          : `Reverted ${s.reverted_at ? new Date(s.reverted_at).toLocaleString() : ""}`;
+      const revertBtn =
+        s.status === "active" || s.status === "revert_failed"
+          ? `<button class="secondary tam-revert-btn" data-id="${escapeHtml(s.id)}" type="button">Revert now</button>`
+          : "";
+      return `
+        <div class="tam-session-card">
+          <div class="tam-session-title">${escapeHtml(s.source_group_name)} &rarr; ${escapeHtml(s.dest_group_name)}${badge}</div>
+          <div class="tam-session-meta">${agentCount} agent(s): ${escapeHtml(agentNames)}</div>
+          <div class="tam-session-meta">${escapeHtml(timing)}</div>
+          ${revertBtn}
+        </div>`;
+    })
+    .join("");
+
+  tamSessionsList.querySelectorAll(".tam-revert-btn").forEach((btn) => {
+    btn.addEventListener("click", () => tamCancelSession(btn.dataset.id, btn));
+  });
+}
+
+async function tamCancelSession(id, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Reverting…";
+  }
+  try {
+    const res = await fetch("/audit/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      tamSetStatus("failure", escapeHtml(data.error || "Revert failed."));
+    }
+  } catch (err) {
+    tamSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    tamLoadSessions();
+  }
+}
+
+async function tamLoadSessions() {
+  try {
+    const res = await fetch("/audit/sessions");
+    const data = await res.json();
+    tamRenderSessions(data.sessions || []);
+  } catch (err) {
+    // Non-critical — leave the last rendered list in place.
+  }
+}
+
+function initTimedAuditModeTab() {
+  if (tamInitialized) {
+    tamLoadSessions();
+    return;
+  }
+  tamInitialized = true;
+  tamLoadGroups();
+  tamLoadSessions();
+  // Poll periodically so countdowns and cross-restart reverts stay current
+  // while this tab is open.
+  tamPollHandle = setInterval(tamLoadSessions, 15000);
+}
+
+loadSettings();
+</script>
+
+</body>
+</html>
