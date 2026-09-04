@@ -3,6 +3,9 @@
 A local, browser-based Python code runner. Write or paste Python in a
 browser tab, run it, compile it into a standalone Windows `.exe`, scan
 the result on VirusTotal, or run your own Airlock Digital scripts —
+Also a custom widgets tab for added little applets. 
+The settings tab allows you to save API keys as well as link to a github repository which you can also synch to a local folder. 
+This is needed as some scripts require custom .yaml files or config.json 
 all served from a small Flask app running on your own machine.
 
 **This app is designed to run only on localhost, for a single local user.
