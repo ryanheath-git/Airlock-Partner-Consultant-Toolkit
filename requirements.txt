@@ -1,0 +1,8 @@
+Flask>=3.0
+pyinstaller>=6.0
+requests>=2.31
+pyyaml
+pandas
+xlsxwriter
+openpyxl
+python-dateutil

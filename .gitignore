@@ -1,0 +1,34 @@
+# Local secrets and per-machine config — never commit this.
+# Contains your VirusTotal / Airlock / GitHub API keys in plaintext.
+config.json
+
+# NFR Tracking widget's own config — contains the Cloud admin API key
+# and your saved partner tenant list. Kept separate from config.json.
+cloud_config.json
+
+# Compiled executables produced by the Compile-to-.exe feature.
+builds/
+
+# Local script folder synced from / used by the API Calls tab.
+# Contains your Airlock Digital scripts; not part of the app itself.
+api_scripts/
+
+# Timed Audit Mode session state — runtime data, not part of the app.
+audit_sessions.json
+
+# Log file (when logging is enabled in Settings) and its rotated backups.
+app.log
+app.log.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.spec
+.venv/
+venv/
+env/
+
+# OS cruft
+.DS_Store
+Thumbs.db

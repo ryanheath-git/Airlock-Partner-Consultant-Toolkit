@@ -3,9 +3,6 @@
 A local, browser-based Python code runner. Write or paste Python in a
 browser tab, run it, compile it into a standalone Windows `.exe`, scan
 the result on VirusTotal, or run your own Airlock Digital scripts —
-Also a custom widgets tab for added little applets. 
-The settings tab allows you to save API keys as well as link to a github repository which you can also synch to a local folder. 
-This is needed as some scripts require custom .yaml files or config.json 
 all served from a small Flask app running on your own machine.
 
 **This app is designed to run only on localhost, for a single local user.
@@ -67,12 +64,13 @@ It is not meant to be exposed to a network or the internet — see
     expandable per-tenant detail — that opens directly in a new
     browser tab.
 - **Settings tab** — a card-based layout (VirusTotal, Airlock Digital,
-  Script folder & execution, GitHub sync) so more options are visible
-  at once. Store your VirusTotal API key, save multiple Airlock Digital
-  connections (each its own tenant + port + key, switchable without
-  re-entering anything), copy any saved key to the clipboard for use as
-  a script argument, set the script folder path and timeout, and
-  configure GitHub sync — all stored locally.
+  Script folder & execution, GitHub sync, Publish to GitHub) so more
+  options are visible at once. Store your VirusTotal API key, save
+  multiple Airlock Digital connections (each its own tenant + port +
+  key, switchable without re-entering anything), copy any saved key to
+  the clipboard for use as a script argument, set the script folder
+  path and timeout, configure GitHub sync, and push this app's own
+  source files to a GitHub repo of your choice — all stored locally.
 
 ## Requirements
 
@@ -169,6 +167,7 @@ first save. This file is git-ignored — it never gets committed.
 | Script folder | Local folder the Scripts tab lists/runs scripts from |
 | Script execution timeout | How long (seconds) a script may run before it's stopped; default 120 |
 | GitHub sync | Optionally pulls `.py` files from a repo into the script folder |
+| Publish to GitHub | Pushes this app's own source files (never your config/secrets) to a repo of your choice, as one commit |
 
 ### Airlock Digital connections (multiple tenants)
 
@@ -219,6 +218,37 @@ A few things worth knowing if you're extending this widget:
   one shows as "Unavailable" for that piece specifically rather than
   blanking out the whole tenant's report.
 
+### Publish to GitHub
+
+The opposite direction from GitHub sync above: instead of pulling
+scripts *into* this app, this card pushes the app's *own* source files
+*out* to a GitHub repo — a quick way to back up or share your changes
+without a separate git setup. It can point at the same repo as GitHub
+sync or a completely different one.
+
+- Always pushes exactly the fixed file list in `GITHUB_PUBLISH_FILES`
+  (`app.py`, `templates/index.html`, `iso_mapping.json`, `README.md`,
+  `PROJECT_SUMMARY.md`, `requirements.txt`, `run.bat`, `.gitignore`) —
+  the same files this project's own `.gitignore` would let you commit
+  by hand. `config.json`, `cloud_config.json`, `venv/`, `builds/`,
+  `api_scripts/`, and `audit_sessions.json` are never touched, by
+  design — this is a fixed list, not a `.gitignore` parser, specifically
+  so a secret file can never end up on it by accident.
+- Requires a personal access token with **write** access to the target
+  repo — a classic token needs the `repo` scope, a fine-grained token
+  needs `Contents: Read and write` on that repo. This is a different
+  requirement than GitHub sync's token, which only needs read access
+  (and isn't needed at all for a public repo).
+- Builds one commit for all files via GitHub's Git Data API (blobs →
+  tree → commit → branch ref), not one commit per file — the branch
+  either fast-forwards to the new commit, or gets created fresh if it
+  doesn't exist yet (e.g. publishing into a brand-new, empty repo).
+- Optional commit message per push; defaults to
+  `Update from Partner Consulting Toolkit (<date/time>)` if left blank.
+- The status panel links straight to the commit on GitHub once a push
+  succeeds, and calls out by name any expected file that wasn't found
+  on disk (nothing else is silently skipped).
+
 ## Security
 
 This app executes arbitrary Python code and, once compiled,
@@ -244,6 +274,11 @@ this in mind:
 - Scripts run from the Scripts tab (local or synced from GitHub) run
   with your full user permissions — only point the script folder /
   GitHub sync at sources you trust.
+- The Publish to GitHub token needs **write** access to whatever repo
+  you point it at — a classic PAT with the `repo` scope can push to
+  every repo that token can see, not just this one, so a fine-grained
+  token scoped to a single repo is safer if your GitHub plan supports
+  it. Either way, treat it like any other credential in this file.
 - Timed Audit Mode moves real endpoints between real Airlock Digital
   policy groups — double-check the source/destination groups and agent
   selection before starting a session. `audit_sessions.json` tracks

@@ -1,0 +1,3133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Airlock Partner Consulting Tool Kit</title>
+<style>
+  :root {
+    --bg: #12173c;
+    --panel: #1b2358;
+    --border: #333e82;
+    --text: #e8eaf6;
+    --accent: #5b9dff;
+    --error: #ef5546;
+    --muted: #8a91c4;
+    --window-border: rgba(91, 157, 255, 0.55);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+  }
+  header .sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  button#run {
+    background: var(--accent);
+    color: #12173c;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#run:hover { opacity: 0.9; }
+  button#run:disabled { opacity: 0.5; cursor: default; }
+  .actions {
+    display: flex;
+    gap: 10px;
+  }
+  button#compile {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#compile:hover { background: rgba(91, 157, 255, 0.15); }
+  button#compile:disabled { opacity: 0.5; cursor: default; }
+  .status-panel {
+    display: flex;
+    flex-direction: column;
+    border-top: 2px solid var(--window-border);
+    background: var(--panel);
+    padding: 14px 18px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    min-height: 100px;
+    max-height: 260px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .status-panel .status-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .status-panel .status-text { line-height: 1.5; }
+  .status-panel.idle .status-text { color: var(--muted); }
+  .status-panel.pending .status-text { color: var(--muted); }
+  .status-panel.success .status-text { color: var(--accent); }
+  .status-panel.failure .status-text { color: var(--error); }
+  .status-panel a {
+    color: var(--accent);
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .status-panel pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--error);
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+  .status-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button.status-btn {
+    display: none;
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    padding: 7px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.status-btn.show { display: inline-block; }
+  button.status-btn:hover { background: rgba(91, 157, 255, 0.15); }
+  button.status-btn:disabled { opacity: 0.5; cursor: default; }
+  main {
+    flex: 1;
+    display: flex;
+    gap: 14px;
+    padding: 14px;
+    min-height: 0;
+  }
+  main.hidden { display: none; }
+  .pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 2px solid var(--window-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .left-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .apicalls-wrap {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  .apicalls-wrap label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .apicalls-wrap input[type="text"],
+  .apicalls-wrap select {
+    background: var(--bg);
+    color: var(--text);
+    border: 2px solid var(--border);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  .apicalls-wrap button {
+    align-self: flex-start;
+    background: var(--accent);
+    color: #12173c;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .apicalls-wrap button:disabled { opacity: 0.5; cursor: default; }
+  .apicalls-wrap button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+  }
+  .apicalls-wrap button.secondary:hover { background: rgba(91, 157, 255, 0.15); }
+  .apicalls-wrap .hint {
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .scripts-airlock-info {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    background: var(--bg);
+  }
+  .scripts-airlock-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .scripts-airlock-row:last-of-type { margin-bottom: 0; }
+  .scripts-airlock-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  .scripts-airlock-row code {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .scripts-airlock-row button {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+  .field-status {
+    margin-top: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    min-height: 16px;
+  }
+  .field-status.success { color: var(--accent); }
+  .field-status.failure { color: var(--error); }
+  .radio-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+  .radio-label {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text) !important;
+    margin-bottom: 0 !important;
+    cursor: pointer;
+  }
+  .radio-label input[type="radio"] {
+    accent-color: var(--accent);
+  }
+  .pane-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-bottom: 2px solid var(--window-border);
+    background: var(--panel);
+  }
+  textarea#code {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 14px;
+    tab-size: 4;
+  }
+  #output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #output .stdout { color: var(--text); }
+  #output .stderr { color: var(--error); }
+  #output .meta { color: var(--muted); margin-top: 10px; font-size: 12px; }
+  #output .placeholder { color: var(--muted); font-style: italic; }
+  kbd {
+    background: var(--panel);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 10px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom: 2px solid var(--accent);
+  }
+  .tab-panel { display: none; flex: 1; min-height: 0; }
+  .tab-panel.active { display: flex; }
+  .settings-wrap {
+    padding: 24px 30px;
+    max-width: 1100px;
+    width: 100%;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  .settings-card {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px 20px;
+  }
+  .settings-card h2 { margin-top: 0 !important; }
+
+  /* --- Custom Widgets: Timed Audit Mode --- */
+  .tam-agent-list {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    margin-top: 8px;
+  }
+  .tam-agent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tam-agent-row:last-child { border-bottom: none; }
+  .tam-agent-row input[type="checkbox"] { accent-color: var(--accent); }
+  .tam-agent-row .tam-agent-meta { color: var(--muted); font-size: 11px; margin-left: auto; }
+  .tam-agent-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .tam-session-card {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: var(--bg);
+  }
+  .tam-session-card:last-child { margin-bottom: 0; }
+  .tam-session-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .tam-session-meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .tam-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tam-badge.active { background: rgba(91, 157, 255, 0.2); color: var(--accent); }
+  .tam-badge.reverted { background: rgba(138, 145, 196, 0.2); color: var(--muted); }
+  .tam-badge.revert_failed { background: rgba(239, 85, 70, 0.2); color: var(--error); }
+
+  /* --- Custom Widgets: ISO 27001 Compliance --- */
+  .iso-group-card {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: var(--bg);
+  }
+  .iso-group-card:last-child { margin-bottom: 0; }
+  .iso-group-name { font-weight: 600; font-size: 14px; margin-bottom: 10px; }
+  .iso-group-error { color: var(--error); font-size: 13px; }
+  .iso-control-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .iso-control-row:last-child { border-bottom: none; }
+  .iso-control-name { flex: 1; min-width: 0; }
+  .iso-control-detail { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .iso-badge {
+    flex-shrink: 0;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .iso-badge.meets { background: rgba(45, 212, 191, 0.2); color: var(--accent); }
+  .iso-badge.partial { background: rgba(184, 134, 11, 0.25); color: #d9a441; }
+  .iso-badge.unmet { background: rgba(239, 85, 70, 0.2); color: var(--error); }
+  .iso-badge.unknown, .iso-badge.error { background: rgba(138, 145, 196, 0.2); color: var(--muted); }
+  .iso-summary-line {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+  .iso-summary-line span { color: var(--muted); }
+
+  /* --- Custom Widgets: Partner Engagement Report --- */
+  .partner-tenants-details {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .partner-tenants-details > summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .partner-tenants-details > summary::-webkit-details-marker { display: none; }
+  .partner-tenants-details > summary::after {
+    content: "▸";
+    color: var(--accent);
+    transition: transform 0.15s ease;
+    margin-left: 8px;
+  }
+  .partner-tenants-details[open] > summary::after { transform: rotate(90deg); }
+  .partner-tenants-details > summary:hover { background: var(--bg); }
+  .partner-tenants-details > #partner-tenants-list { padding: 0 14px 14px; }
+  .partner-tenant-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    background: var(--bg);
+  }
+  .partner-tenant-card:last-child { margin-bottom: 0; }
+  .partner-tenant-info { flex: 1; min-width: 0; }
+  .partner-tenant-name { font-weight: 600; font-size: 13px; }
+  .partner-tenant-meta { color: var(--muted); font-size: 11px; margin-top: 2px; word-break: break-all; }
+  .partner-tenant-card button {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+  .iso-group-meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .iso-chart-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .iso-chart-svg { flex-shrink: 0; }
+  .iso-chart-legend { flex: 1; min-width: 220px; }
+  .iso-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .iso-legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .iso-chart-meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .settings-wrap h2 {
+    font-size: 15px;
+    margin: 0 0 4px 0;
+  }
+  .settings-wrap .hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+  }
+  .settings-wrap label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .settings-wrap input[type="password"],
+  .settings-wrap input[type="text"],
+  .settings-wrap select {
+    width: 100%;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    margin-bottom: 14px;
+  }
+  .settings-wrap button {
+    background: var(--accent);
+    color: #12173c;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #settings-status {
+    display: none;
+  }
+  .settings-wrap button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    margin-left: 10px;
+  }
+  .settings-wrap button.secondary:hover { background: rgba(91, 157, 255, 0.15); }
+  .settings-wrap button:disabled { opacity: 0.5; cursor: default; }
+
+  /* --- Custom Widgets: tile layout --- */
+  .widgets-layout {
+    display: flex;
+    gap: 20px;
+    padding: 20px 24px;
+    flex: 1;
+    min-height: 0;
+  }
+  .widgets-tiles {
+    width: 300px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .widget-tile {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .widget-tile:hover { border-color: var(--window-border); }
+  .widget-tile.active { border-color: var(--accent); }
+  .widget-tile-icon { font-size: 22px; line-height: 1.2; }
+  .widget-tile-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .widget-tile-desc { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .widgets-detail {
+    flex: 1;
+    min-width: 0;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    overflow: hidden;
+    display: flex;
+  }
+  .widgets-detail-inner {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    overflow-y: auto;
+    padding: 24px 28px;
+  }
+  .widgets-detail-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+  }
+  .widget-detail-panel { display: none; }
+  .widget-detail-panel.active { display: block; }
+  .key-actions {
+    display: flex;
+    align-items: center;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    accent-color: var(--accent);
+  }
+  .checkbox-row label {
+    margin-bottom: 0 !important;
+    color: var(--text) !important;
+    font-size: 13px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Airlock Partner Consulting Tool Kit</h1>
+    <div class="sub">Runs on your machine only &middot; localhost:5000</div>
+  </div>
+  <div class="actions" id="header-actions">
+    <button id="run">Run</button>
+    <button id="compile">Compile to .exe</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn" data-tab="apicalls">Scripts</button>
+  <button class="tab-btn" data-tab="widgets">Custom Widgets</button>
+  <button class="tab-btn active" data-tab="editor">Editor</button>
+  <button class="tab-btn" data-tab="settings">Settings</button>
+</div>
+
+<main id="main-panel">
+  <div class="pane">
+    <div id="left-editor" class="left-content">
+      <div class="pane-label">Code</div>
+      <textarea id="code" spellcheck="false"># Paste any Python code into this window, then click Run to execute
+# it immediately, or Compile to .exe to build it into a standalone
+# Windows executable.
+
+print("Hello from your local Python runner!")</textarea>
+      <div id="status-panel-editor" class="status-panel idle">
+        <div class="status-label">Status</div>
+        <div class="status-text" id="status-panel-editor-text">No compile actions yet. Click &ldquo;Compile to .exe&rdquo; to build an executable.</div>
+        <div class="status-actions">
+          <button id="vt-upload" class="status-btn">Upload to VirusTotal</button>
+          <button id="vt-open" class="status-btn">Open VirusTotal Results</button>
+        </div>
+      </div>
+    </div>
+    <div id="left-apicalls" class="left-content" style="display:none;">
+      <div class="pane-label">Scripts</div>
+      <div class="apicalls-wrap">
+        <label for="api-script-select">Script</label>
+        <select id="api-script-select"><option value="">Loading scripts…</option></select>
+        <label for="api-script-args">Arguments (optional)</label>
+        <input type="text" id="api-script-args" placeholder="e.g. --user jdoe --verbose" autocomplete="off">
+
+        <div id="scripts-airlock-info" class="scripts-airlock-info">
+          <div class="scripts-airlock-row">
+            <span class="scripts-airlock-label">Connection</span>
+            <select id="scripts-airlock-profile-select" style="flex:1; min-width:0;"><option value="">Loading…</option></select>
+          </div>
+          <div class="scripts-airlock-row">
+            <span class="scripts-airlock-label">Tenant</span>
+            <code id="scripts-airlock-url">Loading…</code>
+            <button id="scripts-airlock-url-copy" class="secondary" type="button">Copy</button>
+          </div>
+          <div class="scripts-airlock-row">
+            <span class="scripts-airlock-label">Port</span>
+            <code id="scripts-airlock-port">Loading…</code>
+            <button id="scripts-airlock-port-copy" class="secondary" type="button">Copy</button>
+          </div>
+          <div class="scripts-airlock-row">
+            <span class="scripts-airlock-label">API Key</span>
+            <code id="scripts-airlock-key-preview">Loading…</code>
+            <button id="scripts-airlock-key-copy" class="secondary" type="button">Copy</button>
+          </div>
+          <div id="scripts-airlock-status" class="field-status"></div>
+        </div>
+
+        <button id="api-run">Run script</button>
+        <div id="api-scripts-hint" class="hint"></div>
+      </div>
+      <div id="status-panel-scripts" class="status-panel idle">
+        <div class="status-label">Status</div>
+        <div class="status-text" id="status-panel-scripts-text">No script runs yet. Select a script and click &ldquo;Run script&rdquo;.</div>
+        <div class="status-actions">
+          <button id="api-open-output" class="status-btn">Open output file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pane">
+    <div class="pane-label">Output</div>
+    <div id="output"><span class="placeholder">Output will appear here...</span></div>
+  </div>
+</main>
+
+<div class="tab-panel" id="tab-widgets">
+  <div class="widgets-layout">
+
+    <div class="widgets-tiles">
+      <div class="widget-tile" data-widget="timed-audit-mode">
+        <div class="widget-tile-icon">⏱️</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">Timed Audit Mode</div>
+          <div class="widget-tile-desc">Move agents to an audit group temporarily, then revert automatically.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="iso27001">
+        <div class="widget-tile-icon">📋</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">ISO 27001 Compliance</div>
+          <div class="widget-tile-desc">Assess policy groups against ISO 27001 controls Airlock can help satisfy.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="partner-report">
+        <div class="widget-tile-icon">🤝</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">NFR Tracking</div>
+          <div class="widget-tile-desc">Track user activity, agent counts, and license utilization across partner NFR tenants.</div>
+        </div>
+      </div>
+      <!-- More widget tiles go here as they're added. -->
+    </div>
+
+    <div class="widgets-detail">
+      <div class="widgets-detail-inner settings-wrap" style="max-width: none; padding: 0;">
+        <div class="widgets-detail-placeholder" id="widgets-detail-placeholder">
+          <p class="hint">Select a widget on the left to get started.</p>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-timed-audit-mode" style="padding: 24px 28px;">
+          <h2>Timed Audit Mode</h2>
+          <p class="hint">
+            Move selected agents from one Airlock policy group (usually
+            enforcement) into another (usually audit mode) for a set
+            amount of time, then move them back automatically — even if
+            the app was restarted while the timer was running. Uses your
+            Airlock Digital API key and tenant from Settings.
+          </p>
+
+          <div id="tam-connection-hint" class="hint"></div>
+
+          <p class="hint" style="margin-top: 6px;">
+            <strong>Note:</strong> <code>app.py</code> needs to keep running for scheduled
+            reverts to happen automatically. If it's closed while a timer is running, the
+            revert catches up as soon as you start it again — it won't happen while it's off.
+          </p>
+
+          <label for="tam-source-group">Move agents from</label>
+          <input type="text" id="tam-source-filter" placeholder="Filter groups…" autocomplete="off">
+          <select id="tam-source-group"><option value="">Loading groups…</option></select>
+
+          <label for="tam-dest-group">Move agents to (audit group)</label>
+          <input type="text" id="tam-dest-filter" placeholder="Filter groups…" autocomplete="off">
+          <select id="tam-dest-group"><option value="">Loading groups…</option></select>
+
+          <button id="tam-refresh-groups" class="secondary" type="button">Refresh groups</button>
+
+          <label style="margin-top: 16px; display: block;">Agents in source group</label>
+          <div id="tam-agents-hint" class="hint">Select a source group to load its agents.</div>
+          <div id="tam-agent-list" class="tam-agent-list"></div>
+          <div class="tam-agent-actions">
+            <button id="tam-select-all" class="secondary" type="button">Select all</button>
+            <button id="tam-select-none" class="secondary" type="button">Select none</button>
+          </div>
+
+          <label for="tam-duration" style="margin-top: 16px; display: block;">Duration</label>
+          <select id="tam-duration">
+            <option value="600">10 minutes</option>
+            <option value="1800">30 minutes</option>
+            <option value="3600" selected>1 hour</option>
+            <option value="14400">4 hours</option>
+            <option value="28800">8 hours</option>
+            <option value="86400">24 hours</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <input type="text" id="tam-duration-custom" placeholder="Minutes" style="display:none;" inputmode="numeric">
+
+          <button id="tam-start" style="margin-top: 4px;">Start Timed Audit Mode</button>
+
+          <div id="status-panel-tam" class="status-panel idle" style="margin-top: 16px; border-top: none; border: 2px solid var(--window-border); border-radius: 6px;">
+            <div class="status-label">Status</div>
+            <div class="status-text" id="status-panel-tam-text">No actions yet.</div>
+          </div>
+
+          <h2 style="margin-top: 28px;">Active &amp; Recent Sessions</h2>
+          <p class="hint">Reverts automatically when the timer runs out, as long as <code>app.py</code> is running (catches up on restart if it wasn't). You can also revert a session early.</p>
+          <div id="tam-sessions-list"><p class="hint">No sessions yet.</p></div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-iso27001" style="padding: 24px 28px;">
+          <h2>ISO 27001 Compliance Assessment</h2>
+          <p class="hint">
+            Shows how each Airlock policy group's configuration provides evidence
+            toward specific ISO/IEC 27001:2022 Annex A controls. This covers only
+            the subset of controls an application-control product can speak to
+            directly — it's a starting point for a broader audit, not a
+            certification on its own. The control list below is editable in
+            <code>iso_mapping.json</code>.
+          </p>
+
+          <div id="iso-controls-summary" class="hint">Loading controls…</div>
+
+          <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
+            <button id="iso-run-assessment" type="button">Run assessment</button>
+            <button id="iso-download-report" class="secondary" type="button">Download HTML report</button>
+          </div>
+
+          <div id="status-panel-iso" class="status-panel idle" style="margin-top: 16px; border-top: none; border: 2px solid var(--window-border); border-radius: 6px;">
+            <div class="status-label">Status</div>
+            <div class="status-text" id="status-panel-iso-text">No assessment run yet.</div>
+          </div>
+
+          <div id="iso-results" style="margin-top: 20px;"></div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-partner-report" style="padding: 24px 28px;">
+          <h2>NFR Tracking</h2>
+          <p class="hint">
+            Pulls user activity, agent counts (audit vs. enforcement), and
+            license utilization across your partner NFR tenants in the Cloud
+            multi-tenant environment.
+          </p>
+          <p class="hint">
+            <strong>Note:</strong> this widget runs completely separately from
+            the rest of the app &mdash; it uses its own admin credential (below),
+            not anything from the Settings tab, since it talks to a different
+            API layer that can see across tenants.
+          </p>
+
+          <label for="partner-base-domain">Cloud base domain</label>
+          <input type="text" id="partner-base-domain" placeholder="e.g. am.appenforcement.com" autocomplete="off">
+          <label for="partner-admin-key">Admin API key</label>
+          <input type="password" id="partner-admin-key" placeholder="Enter your Cloud admin API key" autocomplete="off">
+          <div class="key-actions">
+            <button id="partner-save-config" type="button">Save connection</button>
+            <button id="partner-copy-key" class="secondary" type="button">Copy key</button>
+          </div>
+          <div id="partner-config-status" class="field-status"></div>
+
+          <h2 style="margin-top: 24px;">Partner tenants</h2>
+          <p class="hint">Select which tenants to include in the next report.</p>
+          <details id="partner-tenants-details" class="partner-tenants-details">
+            <summary id="partner-tenants-summary">Loading…</summary>
+            <div id="partner-tenants-list" class="hint">Loading…</div>
+          </details>
+          <div class="tam-agent-actions">
+            <button id="partner-select-all" class="secondary" type="button">Select all</button>
+            <button id="partner-select-none" class="secondary" type="button">Select none</button>
+          </div>
+
+          <label for="partner-new-label" style="margin-top: 16px; display: block;">Label</label>
+          <input type="text" id="partner-new-label" placeholder="e.g. WolfStrata" autocomplete="off">
+          <label for="partner-new-tenant-id">Tenant ID</label>
+          <input type="text" id="partner-new-tenant-id" placeholder="Found in the tenant's console URL" autocomplete="off">
+          <label for="partner-new-directory-id">Directory ID</label>
+          <input type="text" id="partner-new-directory-id" placeholder="Found via browser dev tools on the tenant page" autocomplete="off">
+          <button id="partner-add-tenant" type="button">Add tenant</button>
+          <div id="partner-add-tenant-status" class="field-status"></div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+            <button id="partner-generate-report" type="button">Generate report</button>
+            <button id="partner-export-xlsx" class="secondary" type="button">Export to Excel</button>
+            <button id="partner-export-xml" class="secondary" type="button">Export to XML</button>
+          </div>
+
+          <div id="status-panel-partner" class="status-panel idle" style="margin-top: 16px; border-top: none; border: 2px solid var(--window-border); border-radius: 6px;">
+            <div class="status-label">Status</div>
+            <div class="status-text" id="status-panel-partner-text">No report generated yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="tab-panel" id="tab-settings">
+  <div class="widgets-layout">
+
+    <div class="widgets-tiles">
+      <div class="widget-tile" data-widget="vt">
+        <div class="widget-tile-icon">🛡️</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">VirusTotal API</div>
+          <div class="widget-tile-desc">API key for scanning compiled executables.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="airlock">
+        <div class="widget-tile-icon">🔐</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">Airlock API Settings</div>
+          <div class="widget-tile-desc">Manage Airlock Digital connections used across widgets.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="scripts">
+        <div class="widget-tile-icon">📁</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">Script folder &amp; execution</div>
+          <div class="widget-tile-desc">Where scripts live and how long they're allowed to run.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="github">
+        <div class="widget-tile-icon">🔄</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">GitHub sync</div>
+          <div class="widget-tile-desc">Optionally sync scripts from a GitHub repo.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="github-publish">
+        <div class="widget-tile-icon">🚀</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">Publish to GitHub</div>
+          <div class="widget-tile-desc">Push this app's own source files to your repo.</div>
+        </div>
+      </div>
+      <div class="widget-tile" data-widget="logging">
+        <div class="widget-tile-icon">📝</div>
+        <div class="widget-tile-body">
+          <div class="widget-tile-name">Logging</div>
+          <div class="widget-tile-desc">Terminal + app.log logging, for troubleshooting.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="widgets-detail">
+      <div class="widgets-detail-inner settings-wrap" style="max-width: none; padding: 0;">
+        <div class="widgets-detail-placeholder" id="settings-detail-placeholder">
+          <p class="hint">Select a setting from the list on the left.</p>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-vt" style="padding: 24px 28px;">
+          <h2>VirusTotal API</h2>
+          <p class="hint">
+            Add your VirusTotal API key to enable uploading compiled .exe
+            files for scanning. Get a free key from your VirusTotal account
+            settings. The key is stored in a local <code>config.json</code>
+            file next to <code>app.py</code> — plaintext, on your machine
+            only.
+          </p>
+          <label for="vt-key-input">API key</label>
+          <input type="password" id="vt-key-input" placeholder="Enter your VirusTotal API key" autocomplete="off">
+          <div class="key-actions">
+            <button id="vt-save">Save key</button>
+            <button id="vt-copy" class="secondary">Copy key</button>
+          </div>
+          <div id="vt-settings-status" class="field-status"></div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-airlock" style="padding: 24px 28px;">
+          <h2>Airlock API Settings</h2>
+          <p class="hint">
+            Save multiple Airlock connections — each API key is stored
+            together with its own tenant and port as one unit, so you can't
+            accidentally point the wrong key at the wrong server. Scripts
+            you run from the Scripts tab can read the <strong>active</strong>
+            connection via <code>AIRLOCK_API_KEY</code>,
+            <code>AIRLOCK_TENANT</code>, and <code>AIRLOCK_PORT</code>
+            (your VirusTotal key is also available, as
+            <code>VT_API_KEY</code>).
+          </p>
+
+          <label for="airlock-profile-select">Active connection</label>
+          <select id="airlock-profile-select"><option value="">No connections saved yet</option></select>
+
+          <div id="airlock-active-profile-info" class="scripts-airlock-info" style="display:none;">
+            <div class="scripts-airlock-row">
+              <span class="scripts-airlock-label">Tenant</span>
+              <code id="airlock-active-tenant">—</code>
+              <button id="airlock-active-tenant-copy" class="secondary" type="button">Copy</button>
+            </div>
+            <div class="scripts-airlock-row">
+              <span class="scripts-airlock-label">Port</span>
+              <code id="airlock-active-port">—</code>
+              <button id="airlock-active-port-copy" class="secondary" type="button">Copy</button>
+            </div>
+            <div class="scripts-airlock-row">
+              <span class="scripts-airlock-label">API Key</span>
+              <code id="airlock-active-key-preview">—</code>
+              <button id="airlock-active-key-copy" class="secondary" type="button">Copy</button>
+            </div>
+          </div>
+          <button id="airlock-delete-profile" class="secondary" type="button" style="margin-top: 10px; display:none;">Delete this connection</button>
+          <div id="airlock-profile-status" class="field-status"></div>
+
+          <h2 style="margin-top: 24px;">Add a connection</h2>
+          <label for="airlock-new-label">Label</label>
+          <input type="text" id="airlock-new-label" placeholder="e.g. Client A - Production" autocomplete="off">
+          <label for="airlock-new-tenant">Tenant</label>
+          <input type="text" id="airlock-new-tenant" placeholder="Enter the Airlock Digital tenant" autocomplete="off">
+          <label for="airlock-new-port">Port</label>
+          <input type="text" id="airlock-new-port" placeholder="Default: 3129" autocomplete="off" inputmode="numeric">
+          <label for="airlock-new-key">API key</label>
+          <input type="password" id="airlock-new-key" placeholder="Enter the Airlock Digital API key" autocomplete="off">
+          <button id="airlock-add-profile" type="button">Save new connection</button>
+          <div id="airlock-add-profile-status" class="field-status"></div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-scripts" style="padding: 24px 28px;">
+          <h2>Script folder &amp; execution</h2>
+          <p class="hint">
+            Where the app looks for your Airlock Digital Python scripts
+            (listed in the Scripts tab). Scripts always run from this
+            local folder.
+          </p>
+          <label for="scripts-dir-input">Folder path</label>
+          <input type="text" id="scripts-dir-input" placeholder="e.g. C:\Users\you\airlock-scripts" autocomplete="off">
+          <p class="hint">Leave blank to use the default <code>api_scripts</code> folder next to <code>app.py</code>.</p>
+
+          <label for="scripts-timeout-input">Execution timeout (seconds)</label>
+          <input type="text" id="scripts-timeout-input" placeholder="120" autocomplete="off" inputmode="numeric">
+          <p class="hint">How long a script is allowed to run before it's stopped. Applies to scripts run from the Scripts tab.</p>
+
+          <button id="scripts-dir-save">Save script settings</button>
+          <div id="scripts-dir-settings-status" class="field-status"></div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-github" style="padding: 24px 28px;">
+          <h2>GitHub sync</h2>
+          <p class="hint">
+            Optionally sync <code>.py</code> files from a GitHub repo into
+            the script folder above. Sync runs automatically on startup
+            when enabled, and can be triggered manually any time. Other
+            files already in the folder are left untouched.
+          </p>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="github-sync-enabled">
+            <label for="github-sync-enabled">Enable GitHub sync</label>
+          </div>
+
+          <div id="github-sync-fields">
+            <label for="github-repo-input">Repository</label>
+            <input type="text" id="github-repo-input" placeholder="owner/repo or https://github.com/owner/repo" autocomplete="off">
+            <label for="github-branch-input">Branch</label>
+            <input type="text" id="github-branch-input" placeholder="main" autocomplete="off">
+            <label for="github-subdir-input">Subfolder in repo (optional)</label>
+            <input type="text" id="github-subdir-input" placeholder="e.g. scripts" autocomplete="off">
+            <label for="github-token-input">Personal access token (optional — only needed for private repos)</label>
+            <input type="password" id="github-token-input" placeholder="Leave blank if the repo is public" autocomplete="off">
+          </div>
+
+          <button id="github-sync-save">Save GitHub sync settings</button>
+          <button id="github-sync-now" class="secondary">Sync now</button>
+          <div id="github-sync-settings-status" class="field-status"></div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-github-publish" style="padding: 24px 28px;">
+          <h2>Publish to GitHub</h2>
+          <p class="hint">
+            Pushes this app's own source files — not your data — to a
+            GitHub repo of your choice, as a single commit. This is
+            separate from GitHub sync above, which pulls scripts the
+            other direction; publishing can use the same repo or a
+            different one entirely.
+          </p>
+          <p class="hint">
+            Always includes exactly these files, nothing else —
+            <code>config.json</code>, <code>cloud_config.json</code>,
+            <code>venv/</code>, and everything else your
+            <code>.gitignore</code> already excludes are never touched:
+          </p>
+          <p class="hint" id="github-publish-file-list">
+            <code>.gitignore</code>, <code>app.py</code>,
+            <code>iso_mapping.json</code>, <code>PROJECT_SUMMARY.md</code>,
+            <code>README.md</code>, <code>requirements.txt</code>,
+            <code>run.bat</code>, <code>templates/index.html</code>
+          </p>
+
+          <label for="github-publish-repo-input">Repository</label>
+          <input type="text" id="github-publish-repo-input" placeholder="owner/repo or https://github.com/owner/repo" autocomplete="off">
+          <label for="github-publish-branch-input">Branch</label>
+          <input type="text" id="github-publish-branch-input" placeholder="main" autocomplete="off">
+          <label for="github-publish-token-input">Personal access token</label>
+          <input type="password" id="github-publish-token-input" placeholder="Needs write access to the repo (classic 'repo' scope, or fine-grained Contents: Read and write)" autocomplete="off">
+          <button id="github-publish-save">Save publish settings</button>
+          <div id="github-publish-settings-status" class="field-status"></div>
+
+          <label for="github-publish-message-input" style="margin-top: 16px; display: block;">Commit message (optional)</label>
+          <input type="text" id="github-publish-message-input" placeholder="Defaults to &quot;Update from Partner Consulting Toolkit (date/time)&quot;" autocomplete="off">
+          <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+            <button id="github-publish-now" type="button">Push to GitHub</button>
+          </div>
+
+          <div id="status-panel-github-publish" class="status-panel idle" style="margin-top: 16px; border-top: none; border: 2px solid var(--window-border); border-radius: 6px;">
+            <div class="status-label">Status</div>
+            <div class="status-text" id="status-panel-github-publish-text">Nothing pushed yet.</div>
+          </div>
+        </div>
+
+        <div class="widget-detail-panel" id="widget-detail-logging" style="padding: 24px 28px;">
+          <h2>Logging</h2>
+          <p class="hint">
+            When enabled, this covers everything currently printed to the
+            terminal running <code>app.py</code> — including diagnosing
+            third-party API calls (Airlock Digital, VirusTotal, GitHub,
+            the Cloud multi-tenant API) — and also writes it to
+            <code>app.log</code> next to <code>app.py</code>, so it's not
+            lost when the terminal window closes or scrolls back too far.
+            The log file rotates automatically once it gets large, keeping
+            a few backups. Takes effect immediately, no restart needed.
+          </p>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="logging-enabled" checked>
+            <label for="logging-enabled">Enable logging (terminal + app.log)</label>
+          </div>
+
+          <button id="logging-save">Save</button>
+          <div id="logging-settings-status" class="field-status"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const codeEl = document.getElementById("code");
+const outputEl = document.getElementById("output");
+const runBtn = document.getElementById("run");
+const compileBtn = document.getElementById("compile");
+const statusPanelEditorEl = document.getElementById("status-panel-editor");
+const statusPanelEditorTextEl = document.getElementById("status-panel-editor-text");
+const vtUploadBtn = document.getElementById("vt-upload");
+const vtOpenBtn = document.getElementById("vt-open");
+let currentVtUrl = "";
+
+const statusPanelScriptsEl = document.getElementById("status-panel-scripts");
+const statusPanelScriptsTextEl = document.getElementById("status-panel-scripts-text");
+
+const mainPanel = document.getElementById("main-panel");
+const headerActions = document.getElementById("header-actions");
+const leftEditor = document.getElementById("left-editor");
+const leftApicalls = document.getElementById("left-apicalls");
+const apiScriptSelect = document.getElementById("api-script-select");
+const apiScriptArgsInput = document.getElementById("api-script-args");
+const apiRunBtn = document.getElementById("api-run");
+const apiScriptsHint = document.getElementById("api-scripts-hint");
+const scriptsAirlockProfileSelect = document.getElementById("scripts-airlock-profile-select");
+const scriptsAirlockUrlEl = document.getElementById("scripts-airlock-url");
+const scriptsAirlockPortEl = document.getElementById("scripts-airlock-port");
+const scriptsAirlockKeyPreviewEl = document.getElementById("scripts-airlock-key-preview");
+const scriptsAirlockUrlCopyBtn = document.getElementById("scripts-airlock-url-copy");
+const scriptsAirlockPortCopyBtn = document.getElementById("scripts-airlock-port-copy");
+const scriptsAirlockKeyCopyBtn = document.getElementById("scripts-airlock-key-copy");
+const scriptsAirlockStatusEl = document.getElementById("scripts-airlock-status");
+const apiOpenOutputBtn = document.getElementById("api-open-output");
+
+const vtKeyInput = document.getElementById("vt-key-input");
+const vtSaveBtn = document.getElementById("vt-save");
+const vtCopyBtn = document.getElementById("vt-copy");
+const vtStatusEl = document.getElementById("vt-settings-status");
+
+const airlockProfileSelect = document.getElementById("airlock-profile-select");
+const airlockActiveProfileInfo = document.getElementById("airlock-active-profile-info");
+const airlockActiveTenantEl = document.getElementById("airlock-active-tenant");
+const airlockActivePortEl = document.getElementById("airlock-active-port");
+const airlockActiveKeyPreviewEl = document.getElementById("airlock-active-key-preview");
+const airlockActiveTenantCopyBtn = document.getElementById("airlock-active-tenant-copy");
+const airlockActivePortCopyBtn = document.getElementById("airlock-active-port-copy");
+const airlockActiveKeyCopyBtn = document.getElementById("airlock-active-key-copy");
+const airlockDeleteProfileBtn = document.getElementById("airlock-delete-profile");
+const airlockProfileStatusEl = document.getElementById("airlock-profile-status");
+const airlockNewLabelInput = document.getElementById("airlock-new-label");
+const airlockNewTenantInput = document.getElementById("airlock-new-tenant");
+const airlockNewPortInput = document.getElementById("airlock-new-port");
+const airlockNewKeyInput = document.getElementById("airlock-new-key");
+const airlockAddProfileBtn = document.getElementById("airlock-add-profile");
+const airlockAddProfileStatusEl = document.getElementById("airlock-add-profile-status");
+
+const scriptsDirInput = document.getElementById("scripts-dir-input");
+const scriptsTimeoutInput = document.getElementById("scripts-timeout-input");
+const scriptsDirSaveBtn = document.getElementById("scripts-dir-save");
+const scriptsDirStatusEl = document.getElementById("scripts-dir-settings-status");
+
+const githubSyncEnabledCheckbox = document.getElementById("github-sync-enabled");
+const loggingEnabledCheckbox = document.getElementById("logging-enabled");
+const loggingSaveBtn = document.getElementById("logging-save");
+const loggingSettingsStatusEl = document.getElementById("logging-settings-status");
+const githubSyncFields = document.getElementById("github-sync-fields");
+const githubRepoInput = document.getElementById("github-repo-input");
+const githubBranchInput = document.getElementById("github-branch-input");
+const githubSubdirInput = document.getElementById("github-subdir-input");
+const githubTokenInput = document.getElementById("github-token-input");
+const githubSyncSaveBtn = document.getElementById("github-sync-save");
+const githubSyncNowBtn = document.getElementById("github-sync-now");
+const githubSyncStatusEl = document.getElementById("github-sync-settings-status");
+
+const githubPublishRepoInput = document.getElementById("github-publish-repo-input");
+const githubPublishBranchInput = document.getElementById("github-publish-branch-input");
+const githubPublishTokenInput = document.getElementById("github-publish-token-input");
+const githubPublishSaveBtn = document.getElementById("github-publish-save");
+const githubPublishSettingsStatusEl = document.getElementById("github-publish-settings-status");
+const githubPublishMessageInput = document.getElementById("github-publish-message-input");
+const githubPublishNowBtn = document.getElementById("github-publish-now");
+const githubPublishStatusEl = document.getElementById("status-panel-github-publish");
+const githubPublishStatusTextEl = document.getElementById("status-panel-github-publish-text");
+
+let lastCompiledFilename = null;
+let lastOutputFilePath = null;
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Renders the {stdout, stderr, exit_code, timed_out, error} shape returned
+// by /run and /api_scripts/run into the shared output pane.
+function renderRunResult(data) {
+  if (data.error) {
+    outputEl.innerHTML = `<span class="stderr">${escapeHtml(data.error)}</span>`;
+    return;
+  }
+  let html = "";
+  if (data.stdout) html += `<span class="stdout">${escapeHtml(data.stdout)}</span>`;
+  if (data.stderr) html += `<span class="stderr">${escapeHtml(data.stderr)}</span>`;
+  if (!data.stdout && !data.stderr) html = `<span class="placeholder">(no output)</span>`;
+  html += `<div class="meta">Exit code: ${data.exit_code === null ? "killed (timeout)" : data.exit_code}</div>`;
+  outputEl.innerHTML = html;
+}
+
+// Basic tab-key support in the code textarea
+codeEl.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const start = codeEl.selectionStart;
+    const end = codeEl.selectionEnd;
+    codeEl.value = codeEl.value.slice(0, start) + "    " + codeEl.value.slice(end);
+    codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+  }
+});
+codeEl.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    runCode();
+  }
+});
+
+async function runCode() {
+  const code = codeEl.value;
+  runBtn.disabled = true;
+  runBtn.textContent = "Running...";
+  outputEl.innerHTML = "";
+
+  try {
+    const res = await fetch("/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    renderRunResult(await res.json());
+  } catch (err) {
+    outputEl.innerHTML = `<span class="stderr">Request failed: ${escapeHtml(String(err))}</span>`;
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = "Run";
+  }
+}
+
+runBtn.addEventListener("click", runCode);
+
+async function runCompile() {
+  const code = codeEl.value;
+  compileBtn.disabled = true;
+  compileBtn.textContent = "Compiling...";
+  statusPanelEditorEl.className = "status-panel pending";
+  statusPanelEditorTextEl.innerHTML = "Compiling — this can take a while the first time...";
+  vtUploadBtn.classList.remove("show");
+  vtOpenBtn.classList.remove("show");
+  currentVtUrl = "";
+  lastCompiledFilename = null;
+
+  try {
+    const res = await fetch("/compile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      statusPanelEditorEl.className = "status-panel success";
+      statusPanelEditorTextEl.innerHTML =
+        `Compilation complete &mdash; <code>${escapeHtml(data.filename)}</code>` +
+        `<a href="${data.download_url}" download>Download .exe</a>`;
+      lastCompiledFilename = data.filename;
+      vtUploadBtn.classList.add("show");
+    } else {
+      statusPanelEditorEl.className = "status-panel failure";
+      let html = `Compilation failed${data.error ? ": " + escapeHtml(data.error) : ""}`;
+      const log = (data.stderr || "") || (data.stdout || "");
+      if (log) html += `<pre>${escapeHtml(log)}</pre>`;
+      statusPanelEditorTextEl.innerHTML = html;
+    }
+  } catch (err) {
+    statusPanelEditorEl.className = "status-panel failure";
+    statusPanelEditorTextEl.innerHTML = `Request failed: ${escapeHtml(String(err))}`;
+  } finally {
+    compileBtn.disabled = false;
+    compileBtn.textContent = "Compile to .exe";
+  }
+}
+
+compileBtn.addEventListener("click", runCompile);
+
+async function uploadToVirusTotal() {
+  if (!lastCompiledFilename) return;
+
+  vtUploadBtn.disabled = true;
+  vtUploadBtn.textContent = "Uploading...";
+  vtOpenBtn.classList.remove("show");
+  currentVtUrl = "";
+
+  try {
+    const res = await fetch("/virustotal/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: lastCompiledFilename }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      currentVtUrl = data.vt_url;
+      statusPanelEditorTextEl.innerHTML += `<div class="meta">Uploaded to VirusTotal &mdash; analysis in progress. Click "Open VirusTotal Results" to view it.</div>`;
+      vtOpenBtn.classList.add("show");
+    } else {
+      statusPanelEditorTextEl.innerHTML += `<div class="meta" style="color: var(--error);">VirusTotal upload failed: ${escapeHtml(data.error || "unknown error")}</div>`;
+    }
+  } catch (err) {
+    statusPanelEditorTextEl.innerHTML += `<div class="meta" style="color: var(--error);">VirusTotal request failed: ${escapeHtml(String(err))}</div>`;
+  } finally {
+    vtUploadBtn.disabled = false;
+    vtUploadBtn.textContent = "Upload to VirusTotal";
+  }
+}
+
+function openVirusTotalResults() {
+  if (!currentVtUrl) return;
+  window.open(currentVtUrl, "_blank");
+}
+
+vtUploadBtn.addEventListener("click", uploadToVirusTotal);
+vtOpenBtn.addEventListener("click", openVirusTotalResults);
+
+// --- Scripts tab ---
+let scriptsAirlockUrlValue = "";
+let scriptsAirlockPortValue = "";
+let scriptsAirlockActiveProfileId = "";
+
+async function loadScriptsAirlockInfo() {
+  scriptsAirlockUrlEl.textContent = "Loading…";
+  scriptsAirlockPortEl.textContent = "Loading…";
+  scriptsAirlockKeyPreviewEl.textContent = "Loading…";
+  scriptsAirlockUrlValue = "";
+  scriptsAirlockPortValue = "";
+  scriptsAirlockActiveProfileId = "";
+
+  try {
+    const [configRes, profilesRes] = await Promise.all([fetch("/config"), fetch("/airlock/profiles")]);
+    const data = await configRes.json();
+    const profilesData = await profilesRes.json();
+    const profiles = profilesData.profiles || [];
+
+    scriptsAirlockActiveProfileId = data.active_airlock_profile_id || "";
+
+    if (profiles.length === 0) {
+      scriptsAirlockProfileSelect.innerHTML = `<option value="">No connections saved — add one in Settings</option>`;
+    } else {
+      scriptsAirlockProfileSelect.innerHTML = profiles
+        .map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.label)} — ${escapeHtml(p.tenant)}</option>`)
+        .join("");
+      if (scriptsAirlockActiveProfileId) scriptsAirlockProfileSelect.value = scriptsAirlockActiveProfileId;
+    }
+
+    const tenant = data.airlock_tenant || "";
+    if (tenant) {
+      scriptsAirlockUrlValue = tenant;
+      scriptsAirlockUrlEl.textContent = tenant;
+    } else {
+      scriptsAirlockUrlEl.textContent = "Not set — add a connection in Settings";
+    }
+
+    scriptsAirlockPortValue = data.airlock_port || "3129";
+    scriptsAirlockPortEl.textContent = scriptsAirlockPortValue;
+
+    if (data.airlock_api_key && data.airlock_api_key.has_key) {
+      scriptsAirlockKeyPreviewEl.textContent = data.airlock_api_key.key_preview;
+    } else {
+      scriptsAirlockKeyPreviewEl.textContent = "Not set — add a connection in Settings";
+    }
+  } catch (err) {
+    scriptsAirlockProfileSelect.innerHTML = `<option value="">(unavailable)</option>`;
+    scriptsAirlockUrlEl.textContent = "(unavailable)";
+    scriptsAirlockPortEl.textContent = "(unavailable)";
+    scriptsAirlockKeyPreviewEl.textContent = "(unavailable)";
+  }
+}
+
+scriptsAirlockProfileSelect.addEventListener("change", async () => {
+  const id = scriptsAirlockProfileSelect.value;
+  if (!id) return;
+  try {
+    const res = await fetch("/airlock/profiles/activate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      scriptsAirlockStatusEl.className = "field-status success";
+      scriptsAirlockStatusEl.textContent = "Connection switched.";
+      loadScriptsAirlockInfo();
+      // Keep the Settings tab's picker in sync if it's already loaded.
+      if (typeof loadAirlockProfiles === "function") loadAirlockProfiles();
+      onAirlockConnectionChanged();
+    } else {
+      scriptsAirlockStatusEl.className = "field-status failure";
+      scriptsAirlockStatusEl.textContent = data.error || "Failed to switch connection.";
+    }
+  } catch (err) {
+    scriptsAirlockStatusEl.className = "field-status failure";
+    scriptsAirlockStatusEl.textContent = `Request failed: ${err}`;
+  }
+});
+
+scriptsAirlockUrlCopyBtn.addEventListener("click", () => copyPlainValue(scriptsAirlockUrlValue, scriptsAirlockStatusEl, scriptsAirlockUrlCopyBtn));
+scriptsAirlockPortCopyBtn.addEventListener("click", () => copyPlainValue(scriptsAirlockPortValue, scriptsAirlockStatusEl, scriptsAirlockPortCopyBtn));
+scriptsAirlockKeyCopyBtn.addEventListener("click", () => copyAirlockProfileKey(scriptsAirlockActiveProfileId, scriptsAirlockStatusEl, scriptsAirlockKeyCopyBtn));
+
+async function loadApiScripts() {
+  const previousValue = apiScriptSelect.value;
+  apiScriptSelect.innerHTML = `<option value="">Loading scripts…</option>`;
+  apiScriptsHint.textContent = "Loading...";
+  try {
+    const res = await fetch("/api_scripts");
+    const data = await res.json();
+
+    if (data.error) {
+      apiScriptSelect.innerHTML = `<option value="">(error loading scripts)</option>`;
+      apiScriptsHint.textContent = data.error;
+      return;
+    }
+
+    if (!data.scripts || data.scripts.length === 0) {
+      apiScriptSelect.innerHTML = `<option value="">No scripts found</option>`;
+      apiScriptsHint.textContent = `No scripts found in: ${data.location}`;
+    } else {
+      apiScriptSelect.innerHTML =
+        `<option value="">Select a script…</option>` +
+        data.scripts.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+      if (previousValue && data.scripts.includes(previousValue)) {
+        apiScriptSelect.value = previousValue;
+      }
+      apiScriptsHint.textContent = `Reading from: ${data.location}`;
+    }
+  } catch (err) {
+    apiScriptSelect.innerHTML = `<option value="">(error loading scripts)</option>`;
+    apiScriptsHint.textContent = `Request failed: ${err}`;
+  }
+}
+
+async function runApiScript() {
+  const scriptName = apiScriptSelect.value;
+  if (!scriptName) return;
+  const args = apiScriptArgsInput.value.trim();
+  const script = args ? `${scriptName} ${args}` : scriptName;
+
+  apiRunBtn.disabled = true;
+  apiRunBtn.textContent = "Running...";
+  outputEl.innerHTML = "";
+  apiOpenOutputBtn.classList.remove("show");
+  lastOutputFilePath = null;
+  statusPanelScriptsEl.className = "status-panel pending";
+  statusPanelScriptsTextEl.innerHTML = `Running <code>${escapeHtml(script)}</code>...`;
+
+  try {
+    const res = await fetch("/api_scripts/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ script }),
+    });
+    const data = await res.json();
+    renderRunResult(data);
+
+    if (data.error) {
+      statusPanelScriptsEl.className = "status-panel failure";
+      statusPanelScriptsTextEl.innerHTML = escapeHtml(data.error);
+    } else if (data.timed_out) {
+      statusPanelScriptsEl.className = "status-panel failure";
+      statusPanelScriptsTextEl.innerHTML = "Script timed out.";
+    } else if (data.exit_code === 0) {
+      statusPanelScriptsEl.className = "status-panel success";
+      statusPanelScriptsTextEl.innerHTML = "Script completed successfully (exit code 0).";
+    } else {
+      statusPanelScriptsEl.className = "status-panel failure";
+      statusPanelScriptsTextEl.innerHTML = `Script exited with code ${data.exit_code}.`;
+    }
+
+    if (data.output_file) {
+      lastOutputFilePath = data.output_file;
+      apiOpenOutputBtn.textContent = `Open output file (${data.output_filename})`;
+      apiOpenOutputBtn.classList.add("show");
+    }
+  } catch (err) {
+    statusPanelScriptsEl.className = "status-panel failure";
+    statusPanelScriptsTextEl.innerHTML = `Request failed: ${escapeHtml(String(err))}`;
+    outputEl.innerHTML = `<span class="stderr">Request failed: ${escapeHtml(String(err))}</span>`;
+  } finally {
+    apiRunBtn.disabled = false;
+    apiRunBtn.textContent = "Run script";
+  }
+}
+
+apiRunBtn.addEventListener("click", runApiScript);
+
+async function openOutputFile() {
+  if (!lastOutputFilePath) return;
+
+  apiOpenOutputBtn.disabled = true;
+
+  try {
+    const res = await fetch("/open_file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: lastOutputFilePath }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      statusPanelScriptsTextEl.innerHTML += `<div class="meta">Opened the output file.</div>`;
+    } else {
+      statusPanelScriptsTextEl.innerHTML += `<div class="meta" style="color: var(--error);">${escapeHtml(data.error || "Couldn't open the file.")}</div>`;
+    }
+  } catch (err) {
+    statusPanelScriptsTextEl.innerHTML += `<div class="meta" style="color: var(--error);">Request failed: ${escapeHtml(String(err))}</div>`;
+  } finally {
+    apiOpenOutputBtn.disabled = false;
+  }
+}
+
+apiOpenOutputBtn.addEventListener("click", openOutputFile);
+
+// --- Tabs ---
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const tab = btn.dataset.tab;
+    const fullWidthTabs = { settings: "tab-settings", widgets: "tab-widgets" };
+
+    Object.values(fullWidthTabs).forEach((id) => document.getElementById(id).classList.remove("active"));
+    headerActions.style.display = tab === "editor" ? "flex" : "none";
+
+    if (fullWidthTabs[tab]) {
+      mainPanel.classList.add("hidden");
+      document.getElementById(fullWidthTabs[tab]).classList.add("active");
+    } else {
+      mainPanel.classList.remove("hidden");
+      leftEditor.style.display = tab === "editor" ? "flex" : "none";
+      leftApicalls.style.display = tab === "apicalls" ? "flex" : "none";
+      if (tab === "apicalls") {
+        loadApiScripts();
+        loadScriptsAirlockInfo();
+      }
+    }
+  });
+});
+
+// --- Custom Widgets: tile expand/collapse ---
+document.querySelectorAll("#tab-widgets .widget-tile").forEach((tile) => {
+  tile.addEventListener("click", () => {
+    const widgetId = tile.dataset.widget;
+    const panel = document.getElementById(`widget-detail-${widgetId}`);
+    const placeholder = document.getElementById("widgets-detail-placeholder");
+    const alreadyActive = tile.classList.contains("active");
+
+    document.querySelectorAll("#tab-widgets .widget-tile").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll("#tab-widgets .widget-detail-panel").forEach((p) => p.classList.remove("active"));
+
+    if (alreadyActive) {
+      // Clicking the open tile again collapses it back to the placeholder.
+      placeholder.style.display = "flex";
+      return;
+    }
+
+    tile.classList.add("active");
+    placeholder.style.display = "none";
+    if (panel) {
+      panel.classList.add("active");
+      if (widgetId === "timed-audit-mode") initTimedAuditModeTab();
+      if (widgetId === "iso27001") initIso27001Tab();
+      if (widgetId === "partner-report") initPartnerReportTab();
+    }
+  });
+});
+
+// --- Settings: tile expand/collapse (same pattern as Custom Widgets,
+// scoped independently so the two tabs' open/closed state never cross) ---
+document.querySelectorAll("#tab-settings .widget-tile").forEach((tile) => {
+  tile.addEventListener("click", () => {
+    const settingId = tile.dataset.widget;
+    const panel = document.getElementById(`widget-detail-${settingId}`);
+    const placeholder = document.getElementById("settings-detail-placeholder");
+    const alreadyActive = tile.classList.contains("active");
+
+    document.querySelectorAll("#tab-settings .widget-tile").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll("#tab-settings .widget-detail-panel").forEach((p) => p.classList.remove("active"));
+
+    if (alreadyActive) {
+      placeholder.style.display = "flex";
+      return;
+    }
+
+    tile.classList.add("active");
+    placeholder.style.display = "none";
+    if (panel) panel.classList.add("active");
+  });
+});
+
+// --- Settings ---
+function showGithubSyncFields(enabled) {
+  githubSyncFields.style.display = enabled ? "block" : "none";
+}
+
+githubSyncEnabledCheckbox.addEventListener("change", () => {
+  showGithubSyncFields(githubSyncEnabledCheckbox.checked);
+});
+
+async function loadSettings() {
+  try {
+    const res = await fetch("/config");
+    const data = await res.json();
+    if (data.vt_api_key && data.vt_api_key.has_key) {
+      vtKeyInput.placeholder = `Saved key: ${data.vt_api_key.key_preview}`;
+    }
+
+    scriptsDirInput.value = data.api_scripts_dir || "";
+    scriptsDirInput.placeholder = `Default: ${data.api_scripts_dir_resolved || "api_scripts"}`;
+    scriptsTimeoutInput.value = data.api_script_timeout || "";
+    scriptsTimeoutInput.placeholder = `Default: ${data.api_script_timeout_resolved || 120}`;
+
+    githubSyncEnabledCheckbox.checked = !!data.github_sync_enabled;
+    showGithubSyncFields(githubSyncEnabledCheckbox.checked);
+
+    loggingEnabledCheckbox.checked = data.logging_enabled !== false;
+
+    githubRepoInput.value = data.github_repo || "";
+    githubBranchInput.value = data.github_branch || "";
+    githubSubdirInput.value = data.github_subdir || "";
+    if (data.github_token && data.github_token.has_key) {
+      githubTokenInput.placeholder = `Saved token: ${data.github_token.key_preview}`;
+    }
+
+    githubPublishRepoInput.value = data.github_publish_repo || "";
+    githubPublishBranchInput.value = data.github_publish_branch || "";
+    if (data.github_publish_token && data.github_publish_token.has_key) {
+      githubPublishTokenInput.placeholder = `Saved token: ${data.github_publish_token.key_preview}`;
+    }
+  } catch (err) {
+    // Non-critical — settings tab just won't show saved-value hints.
+  }
+}
+
+async function saveConfigField(field, value, statusEl, button, buttonDefaultText) {
+  button.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, value }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      statusEl.className = "field-status success";
+      statusEl.textContent = data.key_preview ? `Saved (${data.key_preview}).` : "Saved.";
+      return data;
+    } else {
+      statusEl.className = "field-status failure";
+      statusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = buttonDefaultText;
+  }
+  return null;
+}
+
+vtSaveBtn.addEventListener("click", async () => {
+  const value = vtKeyInput.value.trim();
+  if (!value) {
+    vtStatusEl.className = "field-status failure";
+    vtStatusEl.textContent = "Enter an API key first.";
+    return;
+  }
+  const data = await saveConfigField("vt_api_key", value, vtStatusEl, vtSaveBtn, "Save key");
+  if (data) {
+    vtKeyInput.value = "";
+    vtKeyInput.placeholder = `Saved key: ${data.key_preview}`;
+  }
+});
+
+// --- Airlock Digital connections (multiple tenant/key pairs) ---
+async function loadAirlockProfiles() {
+  try {
+    const res = await fetch("/airlock/profiles");
+    const data = await res.json();
+    const profiles = data.profiles || [];
+    const activeId = data.active_id;
+
+    if (profiles.length === 0) {
+      airlockProfileSelect.innerHTML = `<option value="">No connections saved yet</option>`;
+      airlockActiveProfileInfo.style.display = "none";
+      airlockDeleteProfileBtn.style.display = "none";
+      return;
+    }
+
+    airlockProfileSelect.innerHTML = profiles
+      .map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.label)} — ${escapeHtml(p.tenant)}</option>`)
+      .join("");
+    if (activeId) airlockProfileSelect.value = activeId;
+
+    const active = profiles.find((p) => p.id === (airlockProfileSelect.value || activeId));
+    if (active) {
+      airlockActiveTenantEl.textContent = active.tenant;
+      airlockActivePortEl.textContent = active.port;
+      airlockActiveKeyPreviewEl.textContent = active.has_key ? active.key_preview : "Not set";
+      airlockActiveProfileInfo.style.display = "flex";
+      airlockDeleteProfileBtn.style.display = "inline-block";
+    } else {
+      airlockActiveProfileInfo.style.display = "none";
+      airlockDeleteProfileBtn.style.display = "none";
+    }
+  } catch (err) {
+    airlockProfileStatusEl.className = "field-status failure";
+    airlockProfileStatusEl.textContent = `Request failed: ${err}`;
+  }
+}
+
+airlockProfileSelect.addEventListener("change", async () => {
+  const id = airlockProfileSelect.value;
+  if (!id) return;
+  try {
+    const res = await fetch("/airlock/profiles/activate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      airlockProfileStatusEl.className = "field-status success";
+      airlockProfileStatusEl.textContent = "Active connection switched.";
+      loadAirlockProfiles();
+      // Keep the Scripts tab's connection info in sync if it's been loaded.
+      if (typeof loadScriptsAirlockInfo === "function") loadScriptsAirlockInfo();
+      onAirlockConnectionChanged();
+    } else {
+      airlockProfileStatusEl.className = "field-status failure";
+      airlockProfileStatusEl.textContent = data.error || "Failed to switch connection.";
+    }
+  } catch (err) {
+    airlockProfileStatusEl.className = "field-status failure";
+    airlockProfileStatusEl.textContent = `Request failed: ${err}`;
+  }
+});
+
+airlockActiveTenantCopyBtn.addEventListener("click", () =>
+  copyPlainValue(airlockActiveTenantEl.textContent, airlockProfileStatusEl, airlockActiveTenantCopyBtn)
+);
+airlockActivePortCopyBtn.addEventListener("click", () =>
+  copyPlainValue(airlockActivePortEl.textContent, airlockProfileStatusEl, airlockActivePortCopyBtn)
+);
+airlockActiveKeyCopyBtn.addEventListener("click", () => copyAirlockProfileKey(airlockProfileSelect.value, airlockProfileStatusEl, airlockActiveKeyCopyBtn));
+
+async function copyAirlockProfileKey(profileId, statusEl, button) {
+  if (!profileId) return;
+  try {
+    const res = await fetch("/airlock/profiles/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: profileId }),
+    });
+    const data = await res.json();
+    if (!data.value) {
+      statusEl.className = "field-status failure";
+      statusEl.textContent = data.error || "No saved key to copy.";
+      return;
+    }
+    await navigator.clipboard.writeText(data.value);
+    statusEl.className = "field-status success";
+    statusEl.textContent = "Copied to clipboard.";
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    setTimeout(() => { button.textContent = original; }, 1500);
+  } catch (err) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = `Request failed: ${err}`;
+  }
+}
+
+airlockDeleteProfileBtn.addEventListener("click", async () => {
+  const id = airlockProfileSelect.value;
+  if (!id) return;
+  const label = airlockProfileSelect.options[airlockProfileSelect.selectedIndex]?.textContent || "this connection";
+  if (!confirm(`Delete ${label}? This can't be undone.`)) return;
+
+  try {
+    const res = await fetch("/airlock/profiles/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      airlockProfileStatusEl.className = "field-status success";
+      airlockProfileStatusEl.textContent = "Connection deleted.";
+      loadAirlockProfiles();
+      if (typeof loadScriptsAirlockInfo === "function") loadScriptsAirlockInfo();
+      onAirlockConnectionChanged();
+    } else {
+      airlockProfileStatusEl.className = "field-status failure";
+      airlockProfileStatusEl.textContent = data.error || "Failed to delete.";
+    }
+  } catch (err) {
+    airlockProfileStatusEl.className = "field-status failure";
+    airlockProfileStatusEl.textContent = `Request failed: ${err}`;
+  }
+});
+
+airlockAddProfileBtn.addEventListener("click", async () => {
+  const label = airlockNewLabelInput.value.trim();
+  const tenant = airlockNewTenantInput.value.trim();
+  const port = airlockNewPortInput.value.trim();
+  const apiKey = airlockNewKeyInput.value.trim();
+
+  if (!label || !tenant || !apiKey) {
+    airlockAddProfileStatusEl.className = "field-status failure";
+    airlockAddProfileStatusEl.textContent = "Label, tenant, and API key are all required.";
+    return;
+  }
+
+  airlockAddProfileBtn.disabled = true;
+  try {
+    const res = await fetch("/airlock/profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, tenant, port, api_key: apiKey }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      airlockAddProfileStatusEl.className = "field-status success";
+      airlockAddProfileStatusEl.textContent = `Saved "${label}".`;
+      airlockNewLabelInput.value = "";
+      airlockNewTenantInput.value = "";
+      airlockNewPortInput.value = "";
+      airlockNewKeyInput.value = "";
+      loadAirlockProfiles();
+      if (typeof loadScriptsAirlockInfo === "function") loadScriptsAirlockInfo();
+      onAirlockConnectionChanged();
+    } else {
+      airlockAddProfileStatusEl.className = "field-status failure";
+      airlockAddProfileStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    airlockAddProfileStatusEl.className = "field-status failure";
+    airlockAddProfileStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    airlockAddProfileBtn.disabled = false;
+  }
+});
+
+async function copyPlainValue(value, statusEl, button) {
+  if (!value) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = "Nothing to copy yet.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    statusEl.className = "field-status success";
+    statusEl.textContent = "Copied to clipboard.";
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    setTimeout(() => { button.textContent = original; }, 1500);
+  } catch (err) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = "Couldn't copy — clipboard access blocked by the browser.";
+  }
+}
+
+async function copySavedKey(field, inputEl, statusEl, button) {
+  let value = inputEl.value.trim();
+
+  if (!value) {
+    try {
+      const res = await fetch("/config/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field }),
+      });
+      const data = await res.json();
+      if (!data.value) {
+        statusEl.className = "field-status failure";
+        statusEl.textContent = data.error || "No saved key to copy.";
+        return;
+      }
+      value = data.value;
+    } catch (err) {
+      statusEl.className = "field-status failure";
+      statusEl.textContent = `Request failed: ${err}`;
+      return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    statusEl.className = "field-status success";
+    statusEl.textContent = "Copied to clipboard.";
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    setTimeout(() => { button.textContent = original; }, 1500);
+  } catch (err) {
+    statusEl.className = "field-status failure";
+    statusEl.textContent = "Couldn't copy — clipboard access blocked by the browser.";
+  }
+}
+
+vtCopyBtn.addEventListener("click", () => copySavedKey("vt_api_key", vtKeyInput, vtStatusEl, vtCopyBtn));
+
+scriptsDirSaveBtn.addEventListener("click", async () => {
+  const timeoutRaw = scriptsTimeoutInput.value.trim();
+  if (timeoutRaw && (!/^\d+$/.test(timeoutRaw) || parseInt(timeoutRaw, 10) < 1)) {
+    scriptsDirStatusEl.className = "field-status failure";
+    scriptsDirStatusEl.textContent = "Timeout must be a whole number of seconds (1 or greater).";
+    return;
+  }
+
+  const fields = { api_scripts_dir: scriptsDirInput.value.trim() };
+  if (timeoutRaw) fields.api_script_timeout = timeoutRaw;
+
+  scriptsDirSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      scriptsDirStatusEl.className = "field-status success";
+      scriptsDirStatusEl.textContent =
+        `Saved. Using folder: ${data.api_scripts_dir_resolved}, timeout: ${data.api_script_timeout_resolved}s.`;
+    } else {
+      scriptsDirStatusEl.className = "field-status failure";
+      scriptsDirStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    scriptsDirStatusEl.className = "field-status failure";
+    scriptsDirStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    scriptsDirSaveBtn.disabled = false;
+  }
+});
+
+githubSyncSaveBtn.addEventListener("click", async () => {
+  const enabled = githubSyncEnabledCheckbox.checked;
+  const fields = { github_sync_enabled: enabled ? "true" : "false" };
+
+  if (enabled) {
+    const repo = githubRepoInput.value.trim();
+    if (!repo) {
+      githubSyncStatusEl.className = "field-status failure";
+      githubSyncStatusEl.textContent = "Enter a GitHub repo first.";
+      return;
+    }
+    fields.github_repo = repo;
+    fields.github_branch = githubBranchInput.value.trim() || "main";
+    fields.github_subdir = githubSubdirInput.value.trim();
+    // Only send the token if the user typed a new one — leaving it blank
+    // keeps whatever token (if any) is already saved.
+    const token = githubTokenInput.value.trim();
+    if (token) fields.github_token = token;
+  }
+
+  githubSyncSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      githubSyncStatusEl.className = "field-status success";
+      githubSyncStatusEl.textContent = "Saved.";
+      if (fields.github_token) {
+        githubTokenInput.value = "";
+        githubTokenInput.placeholder = `Saved token: ${data.key_previews ? data.key_previews.github_token : ""}`;
+      }
+    } else {
+      githubSyncStatusEl.className = "field-status failure";
+      githubSyncStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    githubSyncStatusEl.className = "field-status failure";
+    githubSyncStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    githubSyncSaveBtn.disabled = false;
+  }
+});
+
+loggingSaveBtn.addEventListener("click", async () => {
+  const enabled = loggingEnabledCheckbox.checked;
+
+  loggingSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field: "logging_enabled", value: enabled ? "true" : "false" }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      loggingSettingsStatusEl.className = "field-status success";
+      loggingSettingsStatusEl.textContent = enabled
+        ? "Saved. Logging is on — writing to the terminal and app.log."
+        : "Saved. Logging is off.";
+    } else {
+      loggingSettingsStatusEl.className = "field-status failure";
+      loggingSettingsStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    loggingSettingsStatusEl.className = "field-status failure";
+    loggingSettingsStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    loggingSaveBtn.disabled = false;
+  }
+});
+
+githubSyncNowBtn.addEventListener("click", async () => {
+  githubSyncNowBtn.disabled = true;
+  githubSyncNowBtn.textContent = "Syncing...";
+  try {
+    const res = await fetch("/sync", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      githubSyncStatusEl.className = "field-status success";
+      const count = data.downloaded ? data.downloaded.length : 0;
+      githubSyncStatusEl.textContent = `Synced ${count} script(s) from ${data.location}.`;
+      if (data.errors && data.errors.length) {
+        githubSyncStatusEl.textContent += ` (${data.errors.length} file(s) failed)`;
+      }
+      if (document.getElementById("tab-apicalls") || leftApicalls.style.display !== "none") {
+        loadApiScripts();
+      }
+    } else {
+      githubSyncStatusEl.className = "field-status failure";
+      githubSyncStatusEl.textContent = data.error || "Sync failed.";
+    }
+  } catch (err) {
+    githubSyncStatusEl.className = "field-status failure";
+    githubSyncStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    githubSyncNowBtn.disabled = false;
+    githubSyncNowBtn.textContent = "Sync now";
+  }
+});
+
+// --- Settings: Publish to GitHub ---
+githubPublishSaveBtn.addEventListener("click", async () => {
+  const repo = githubPublishRepoInput.value.trim();
+  if (!repo) {
+    githubPublishSettingsStatusEl.className = "field-status failure";
+    githubPublishSettingsStatusEl.textContent = "Enter a GitHub repo first.";
+    return;
+  }
+
+  const fields = {
+    github_publish_repo: repo,
+    github_publish_branch: githubPublishBranchInput.value.trim() || "main",
+  };
+  // Only send the token if the user typed a new one — leaving it blank
+  // keeps whatever token (if any) is already saved.
+  const token = githubPublishTokenInput.value.trim();
+  if (token) fields.github_publish_token = token;
+
+  githubPublishSaveBtn.disabled = true;
+  try {
+    const res = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+    if (data.saved) {
+      githubPublishSettingsStatusEl.className = "field-status success";
+      githubPublishSettingsStatusEl.textContent = "Saved.";
+      if (fields.github_publish_token) {
+        githubPublishTokenInput.value = "";
+        githubPublishTokenInput.placeholder = `Saved token: ${data.key_previews ? data.key_previews.github_publish_token : ""}`;
+      }
+    } else {
+      githubPublishSettingsStatusEl.className = "field-status failure";
+      githubPublishSettingsStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    githubPublishSettingsStatusEl.className = "field-status failure";
+    githubPublishSettingsStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    githubPublishSaveBtn.disabled = false;
+  }
+});
+
+function githubPublishSetStatus(kind, htmlContent) {
+  githubPublishStatusEl.className = `status-panel ${kind}`;
+  githubPublishStatusTextEl.innerHTML = htmlContent;
+}
+
+githubPublishNowBtn.addEventListener("click", async () => {
+  githubPublishNowBtn.disabled = true;
+  githubPublishNowBtn.textContent = "Pushing…";
+  githubPublishSetStatus("pending", "Uploading files and creating a commit on GitHub…");
+
+  try {
+    const res = await fetch("/github/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: githubPublishMessageInput.value.trim() }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      let msg = `Pushed ${data.files_pushed.length} file(s) to ${escapeHtml(data.branch)} — <a href="${data.commit_url}" target="_blank">view commit</a>.`;
+      if (data.files_missing && data.files_missing.length) {
+        msg += ` (${data.files_missing.length} expected file(s) not found on disk: ${escapeHtml(data.files_missing.join(", "))})`;
+      }
+      githubPublishSetStatus("success", msg);
+      githubPublishMessageInput.value = "";
+    } else {
+      githubPublishSetStatus("failure", escapeHtml(data.error || "Push failed."));
+    }
+  } catch (err) {
+    githubPublishSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    githubPublishNowBtn.disabled = false;
+    githubPublishNowBtn.textContent = "Push to GitHub";
+  }
+});
+
+// --- Custom Widgets: Timed Audit Mode ---
+const tamConnectionHint = document.getElementById("tam-connection-hint");
+const tamSourceFilterInput = document.getElementById("tam-source-filter");
+const tamDestFilterInput = document.getElementById("tam-dest-filter");
+const tamSourceGroupSelect = document.getElementById("tam-source-group");
+const tamDestGroupSelect = document.getElementById("tam-dest-group");
+const tamRefreshGroupsBtn = document.getElementById("tam-refresh-groups");
+const tamAgentsHint = document.getElementById("tam-agents-hint");
+const tamAgentList = document.getElementById("tam-agent-list");
+const tamSelectAllBtn = document.getElementById("tam-select-all");
+const tamSelectNoneBtn = document.getElementById("tam-select-none");
+const tamDurationSelect = document.getElementById("tam-duration");
+const tamDurationCustom = document.getElementById("tam-duration-custom");
+const tamStartBtn = document.getElementById("tam-start");
+const tamStatusEl = document.getElementById("status-panel-tam");
+const tamStatusTextEl = document.getElementById("status-panel-tam-text");
+const tamSessionsList = document.getElementById("tam-sessions-list");
+
+let tamInitialized = false;
+let tamPollHandle = null;
+let tamCurrentAgents = []; // [{agentid, hostname, username, os}]
+let tamAllGroups = []; // [{groupid, name}] — full unfiltered list, for client-side search
+
+function tamSetStatus(kind, html) {
+  tamStatusEl.className = `status-panel ${kind}`;
+  tamStatusTextEl.innerHTML = html;
+}
+
+function tamGroupOptionsHtml(groups) {
+  return (
+    `<option value="">Select a group…</option>` +
+    groups.map((g) => `<option value="${escapeHtml(g.groupid)}" data-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</option>`).join("")
+  );
+}
+
+// Rebuilds a <select>'s options from tamAllGroups filtered by `query`,
+// preserving the current selection if it still matches the filter.
+function tamRenderFilteredGroups(selectEl, query) {
+  const previousValue = selectEl.value;
+  const q = query.trim().toLowerCase();
+  const filtered = q ? tamAllGroups.filter((g) => g.name.toLowerCase().includes(q)) : tamAllGroups;
+  selectEl.innerHTML = tamGroupOptionsHtml(filtered);
+  if (previousValue && filtered.some((g) => g.groupid === previousValue)) {
+    selectEl.value = previousValue;
+  }
+}
+
+tamSourceFilterInput.addEventListener("input", () => tamRenderFilteredGroups(tamSourceGroupSelect, tamSourceFilterInput.value));
+tamDestFilterInput.addEventListener("input", () => tamRenderFilteredGroups(tamDestGroupSelect, tamDestFilterInput.value));
+
+async function tamLoadGroups() {
+  tamSourceGroupSelect.innerHTML = `<option value="">Loading groups…</option>`;
+  tamDestGroupSelect.innerHTML = `<option value="">Loading groups…</option>`;
+  tamConnectionHint.textContent = "";
+  tamAllGroups = [];
+
+  try {
+    const res = await fetch("/airlock/groups");
+    const data = await res.json();
+
+    if (data.error) {
+      tamSourceGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+      tamDestGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+      tamConnectionHint.textContent = data.error;
+      return;
+    }
+
+    const groups = data.groups || [];
+    if (groups.length === 0) {
+      tamSourceGroupSelect.innerHTML = `<option value="">No groups found</option>`;
+      tamDestGroupSelect.innerHTML = `<option value="">No groups found</option>`;
+      if (data.raw_sample) {
+        tamConnectionHint.innerHTML =
+          `Connected, and Airlock returned data, but it didn't match the fields this app expects. ` +
+          `Raw sample of one group so we can fix the field mapping:<br>` +
+          `<code style="display:block; white-space:pre-wrap; margin-top:6px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 11px;">${escapeHtml(JSON.stringify(data.raw_sample, null, 2))}</code>`;
+      } else {
+        tamConnectionHint.textContent = "Connected, but this API key has no visible policy groups.";
+      }
+      return;
+    }
+
+    tamAllGroups = groups;
+    tamSourceFilterInput.value = "";
+    tamDestFilterInput.value = "";
+    tamSourceGroupSelect.innerHTML = tamGroupOptionsHtml(groups);
+    tamDestGroupSelect.innerHTML = tamGroupOptionsHtml(groups);
+    tamConnectionHint.textContent = `${groups.length} group(s) loaded.`;
+  } catch (err) {
+    tamSourceGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+    tamDestGroupSelect.innerHTML = `<option value="">(unavailable)</option>`;
+    tamConnectionHint.textContent = `Request failed: ${err}`;
+  }
+}
+
+function tamSelectedGroupName(selectEl) {
+  const opt = selectEl.options[selectEl.selectedIndex];
+  return opt ? opt.dataset.name || opt.textContent : "";
+}
+
+async function tamLoadAgents() {
+  const groupid = tamSourceGroupSelect.value;
+  tamCurrentAgents = [];
+  tamAgentList.innerHTML = "";
+
+  if (!groupid) {
+    tamAgentsHint.textContent = "Select a source group to load its agents.";
+    return;
+  }
+
+  tamAgentsHint.textContent = "Loading agents…";
+
+  try {
+    const res = await fetch("/airlock/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupid }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      tamAgentsHint.textContent = data.error;
+      return;
+    }
+
+    tamCurrentAgents = data.agents || [];
+    if (tamCurrentAgents.length === 0) {
+      if (data.raw_sample) {
+        tamAgentsHint.innerHTML =
+          `Connected, and Airlock returned data, but it didn't match the fields this app expects. ` +
+          `Raw sample so we can fix the field mapping:<br>` +
+          `<code style="display:block; white-space:pre-wrap; margin-top:6px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 11px;">${escapeHtml(JSON.stringify(data.raw_sample, null, 2))}</code>`;
+      } else {
+        tamAgentsHint.textContent = "No agents currently in this group.";
+      }
+      return;
+    }
+
+    tamAgentsHint.textContent = `${tamCurrentAgents.length} agent(s) in this group.`;
+    tamAgentList.innerHTML = tamCurrentAgents
+      .map(
+        (a) => `
+        <label class="tam-agent-row">
+          <input type="checkbox" class="tam-agent-checkbox" value="${escapeHtml(a.agentid)}" data-hostname="${escapeHtml(a.hostname)}">
+          ${escapeHtml(a.hostname)}
+          <span class="tam-agent-meta">${escapeHtml(a.username || "")} ${escapeHtml(a.os || "")}</span>
+        </label>`
+      )
+      .join("");
+  } catch (err) {
+    tamAgentsHint.textContent = `Request failed: ${err}`;
+  }
+}
+
+tamSourceGroupSelect.addEventListener("change", tamLoadAgents);
+tamRefreshGroupsBtn.addEventListener("click", async () => {
+  await tamLoadGroups();
+  if (tamSourceGroupSelect.value) await tamLoadAgents();
+});
+
+tamSelectAllBtn.addEventListener("click", () => {
+  tamAgentList.querySelectorAll(".tam-agent-checkbox").forEach((cb) => (cb.checked = true));
+});
+tamSelectNoneBtn.addEventListener("click", () => {
+  tamAgentList.querySelectorAll(".tam-agent-checkbox").forEach((cb) => (cb.checked = false));
+});
+
+tamDurationSelect.addEventListener("change", () => {
+  tamDurationCustom.style.display = tamDurationSelect.value === "custom" ? "block" : "none";
+});
+
+function tamGetDurationSeconds() {
+  if (tamDurationSelect.value === "custom") {
+    const minutes = parseInt(tamDurationCustom.value.trim(), 10);
+    if (!minutes || minutes <= 0) return null;
+    return minutes * 60;
+  }
+  return parseInt(tamDurationSelect.value, 10);
+}
+
+async function tamStartSession() {
+  const sourceGroupid = tamSourceGroupSelect.value;
+  const destGroupid = tamDestGroupSelect.value;
+  const sourceGroupName = tamSelectedGroupName(tamSourceGroupSelect);
+  const destGroupName = tamSelectedGroupName(tamDestGroupSelect);
+  const checked = Array.from(tamAgentList.querySelectorAll(".tam-agent-checkbox:checked"));
+  const durationSeconds = tamGetDurationSeconds();
+
+  if (!sourceGroupid || !destGroupid) {
+    tamSetStatus("failure", "Select both a source and destination group.");
+    return;
+  }
+  if (sourceGroupid === destGroupid) {
+    tamSetStatus("failure", "Source and destination groups must be different.");
+    return;
+  }
+  if (checked.length === 0) {
+    tamSetStatus("failure", "Select at least one agent to move.");
+    return;
+  }
+  if (!durationSeconds) {
+    tamSetStatus("failure", "Enter a valid duration.");
+    return;
+  }
+
+  const agentIds = checked.map((cb) => cb.value);
+  const agentLabels = checked.map((cb) => cb.dataset.hostname);
+
+  tamStartBtn.disabled = true;
+  tamStartBtn.textContent = "Starting…";
+  tamSetStatus("pending", `Moving ${agentIds.length} agent(s) to "${escapeHtml(destGroupName)}"...`);
+
+  try {
+    const res = await fetch("/audit/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_groupid: sourceGroupid,
+        source_group_name: sourceGroupName,
+        dest_groupid: destGroupid,
+        dest_group_name: destGroupName,
+        agent_ids: agentIds,
+        agent_labels: agentLabels,
+        duration_seconds: durationSeconds,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      tamSetStatus(
+        "success",
+        `Moved ${agentIds.length} agent(s) to "${escapeHtml(destGroupName)}". They'll move back to "${escapeHtml(sourceGroupName)}" automatically when the timer runs out.`
+      );
+      tamLoadSessions();
+      tamLoadAgents(); // refresh — the moved agents no longer belong to the source group
+    } else {
+      tamSetStatus("failure", escapeHtml(data.error || "Failed to start."));
+    }
+  } catch (err) {
+    tamSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    tamStartBtn.disabled = false;
+    tamStartBtn.textContent = "Start Timed Audit Mode";
+  }
+}
+
+tamStartBtn.addEventListener("click", tamStartSession);
+
+function tamFormatRemaining(expiresAt) {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return "reverting…";
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}h ${m}m remaining`;
+  if (m > 0) return `${m}m ${s}s remaining`;
+  return `${s}s remaining`;
+}
+
+function tamRenderSessions(sessions) {
+  if (!sessions || sessions.length === 0) {
+    tamSessionsList.innerHTML = `<p class="hint">No sessions yet.</p>`;
+    return;
+  }
+
+  // Most recent first.
+  const sorted = [...sessions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  tamSessionsList.innerHTML = sorted
+    .map((s) => {
+      const badge = `<span class="tam-badge ${s.status}">${s.status.replace("_", " ")}</span>`;
+      const agentCount = (s.agent_labels || s.agent_ids || []).length;
+      const agentNames = (s.agent_labels || s.agent_ids || []).join(", ");
+      const timing =
+        s.status === "active"
+          ? tamFormatRemaining(s.expires_at)
+          : s.status === "revert_failed"
+          ? `Revert failed: ${escapeHtml(s.revert_error || "unknown error")} — retrying`
+          : `Reverted ${s.reverted_at ? new Date(s.reverted_at).toLocaleString() : ""}`;
+      const revertBtn =
+        s.status === "active" || s.status === "revert_failed"
+          ? `<button class="secondary tam-revert-btn" data-id="${escapeHtml(s.id)}" type="button">Revert now</button>`
+          : "";
+      return `
+        <div class="tam-session-card">
+          <div class="tam-session-title">${escapeHtml(s.source_group_name)} &rarr; ${escapeHtml(s.dest_group_name)}${badge}</div>
+          <div class="tam-session-meta">${agentCount} agent(s): ${escapeHtml(agentNames)}</div>
+          <div class="tam-session-meta">${escapeHtml(timing)}</div>
+          ${revertBtn}
+        </div>`;
+    })
+    .join("");
+
+  tamSessionsList.querySelectorAll(".tam-revert-btn").forEach((btn) => {
+    btn.addEventListener("click", () => tamCancelSession(btn.dataset.id, btn));
+  });
+}
+
+async function tamCancelSession(id, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Reverting…";
+  }
+  try {
+    const res = await fetch("/audit/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      tamSetStatus("failure", escapeHtml(data.error || "Revert failed."));
+    }
+  } catch (err) {
+    tamSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    tamLoadSessions();
+  }
+}
+
+async function tamLoadSessions() {
+  try {
+    const res = await fetch("/audit/sessions");
+    const data = await res.json();
+    tamRenderSessions(data.sessions || []);
+  } catch (err) {
+    // Non-critical — leave the last rendered list in place.
+  }
+}
+
+function initTimedAuditModeTab() {
+  if (tamInitialized) {
+    tamLoadSessions();
+    return;
+  }
+  tamInitialized = true;
+  tamLoadGroups();
+  tamLoadSessions();
+  // Poll periodically so countdowns and cross-restart reverts stay current
+  // while this tab is open.
+  tamPollHandle = setInterval(tamLoadSessions, 15000);
+}
+
+// --- Custom Widgets: ISO 27001 Compliance Assessment ---
+const isoControlsSummaryEl = document.getElementById("iso-controls-summary");
+const isoRunBtn = document.getElementById("iso-run-assessment");
+const isoDownloadBtn = document.getElementById("iso-download-report");
+const isoStatusEl = document.getElementById("status-panel-iso");
+const isoStatusTextEl = document.getElementById("status-panel-iso-text");
+const isoResultsEl = document.getElementById("iso-results");
+
+let isoInitialized = false;
+
+function isoSetStatus(kind, html) {
+  isoStatusEl.className = `status-panel ${kind}`;
+  isoStatusTextEl.innerHTML = html;
+}
+
+async function isoLoadControlsSummary() {
+  try {
+    const res = await fetch("/iso/mapping");
+    const data = await res.json();
+    if (data.error) {
+      isoControlsSummaryEl.textContent = data.error;
+      return;
+    }
+    const controls = data.controls || [];
+    if (controls.length === 0) {
+      isoControlsSummaryEl.textContent = "No controls defined in iso_mapping.json.";
+      return;
+    }
+    isoControlsSummaryEl.innerHTML =
+      `Assessing ${controls.length} control(s): ` +
+      controls.map((c) => `${escapeHtml(c.title || c.id)} (${escapeHtml(c.name || "")})`).join(", ");
+  } catch (err) {
+    isoControlsSummaryEl.textContent = `Request failed: ${err}`;
+  }
+}
+
+function isoRenderResults(data) {
+  const controls = data.controls || [];
+  const groups = data.groups || [];
+  const summary = data.summary || {};
+
+  if (groups.length === 0) {
+    isoResultsEl.innerHTML = `<p class="hint">No policy groups returned.</p>`;
+    return;
+  }
+
+  const meetsCount = groups.filter((g) => g.category === "fully_compliant").length;
+
+  const legendHtml = (summary.segments || [])
+    .map(
+      (s) => `
+      <div class="iso-legend-row">
+        <span class="iso-legend-swatch" style="background:${s.color};"></span>
+        ${escapeHtml(s.label)}: <strong>${s.percent}%</strong> (${s.agent_count} endpoint${s.agent_count !== 1 ? "s" : ""})
+      </div>`
+    )
+    .join("");
+
+  const missingNote = summary.groups_missing_agent_count
+    ? ` ${summary.groups_missing_agent_count} group(s) excluded — endpoint count unavailable.`
+    : "";
+
+  const chartHtml = `
+    <div class="iso-chart-row">
+      <div class="iso-chart-svg">${summary.chart_svg || ""}</div>
+      <div class="iso-chart-legend">
+        ${legendHtml}
+        <div class="iso-chart-meta">
+          Based on ${summary.total_agents || 0} managed endpoint(s) across ${groups.length} group(s).${escapeHtml(missingNote)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const summaryHtml = `
+    <div class="iso-summary-line">
+      <span><strong style="color: var(--text);">${groups.length}</strong> group(s) assessed</span>
+      <span><strong style="color: var(--text);">${meetsCount}</strong> fully compliant (by group count)</span>
+      <span><strong style="color: var(--text);">${controls.length}</strong> control(s) evaluated</span>
+    </div>
+  `;
+
+  const categoryLabels = {
+    fully_compliant: "Fully Compliant",
+    partially_compliant: "Partially Compliant",
+    non_compliant: "Non-Compliant",
+    not_assessed: "Not Assessed",
+  };
+  const categoryColors = {
+    fully_compliant: "#1e7e34",
+    partially_compliant: "#b8860b",
+    non_compliant: "#c53929",
+    not_assessed: "#6b6b70",
+  };
+
+  const groupsHtml = groups
+    .map((g) => {
+      if (g.error) {
+        return `
+          <div class="iso-group-card">
+            <div class="iso-group-name">${escapeHtml(g.name)}</div>
+            <div class="iso-group-error">Couldn't assess this group: ${escapeHtml(g.error)}</div>
+          </div>`;
+      }
+      const categoryLabel = categoryLabels[g.category] || g.category;
+      const categoryColor = categoryColors[g.category] || "#6b6b70";
+      const agentNote = g.agent_count !== null && g.agent_count !== undefined
+        ? `${g.agent_count} endpoint${g.agent_count !== 1 ? "s" : ""}`
+        : "endpoint count unavailable";
+
+      const rowsHtml = g.controls
+        .map(
+          (c) => `
+          <div class="iso-control-row">
+            <div class="iso-control-name">
+              <strong>${escapeHtml(c.title || c.id)}</strong> — ${escapeHtml(c.name || "")}
+              <div class="iso-control-detail">${escapeHtml(c.detail || "")}</div>
+            </div>
+            <span class="iso-badge ${c.status}">${escapeHtml(c.status)}</span>
+          </div>`
+        )
+        .join("");
+      return `
+        <div class="iso-group-card">
+          <div class="iso-group-name">
+            ${escapeHtml(g.name)}
+            <span class="iso-badge" style="color:#fff;background:${categoryColor};">${escapeHtml(categoryLabel)}</span>
+          </div>
+          <div class="iso-group-meta">${escapeHtml(agentNote)}</div>
+          ${rowsHtml}
+        </div>`;
+    })
+    .join("");
+
+  isoResultsEl.innerHTML = chartHtml + summaryHtml + groupsHtml;
+}
+
+async function isoRunAssessment() {
+  isoRunBtn.disabled = true;
+  isoRunBtn.textContent = "Running…";
+  isoSetStatus("pending", "Pulling policy configuration for every group — this can take a moment depending on how many groups you have...");
+  isoResultsEl.innerHTML = "";
+
+  try {
+    const res = await fetch("/iso/assessment");
+    const data = await res.json();
+
+    if (data.error) {
+      isoSetStatus("failure", escapeHtml(data.error));
+      return;
+    }
+
+    isoSetStatus("success", `Assessment complete — ${(data.groups || []).length} group(s) evaluated.`);
+    isoRenderResults(data);
+  } catch (err) {
+    isoSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    isoRunBtn.disabled = false;
+    isoRunBtn.textContent = "Run assessment";
+  }
+}
+
+isoRunBtn.addEventListener("click", isoRunAssessment);
+
+async function isoDownloadReport() {
+  isoDownloadBtn.disabled = true;
+  isoDownloadBtn.textContent = "Generating…";
+  isoSetStatus("pending", "Generating HTML report — this runs a fresh assessment across all groups...");
+
+  try {
+    const res = await fetch("/iso/report");
+    if (!res.ok) {
+      let message = `Request failed (status ${res.status})`;
+      try {
+        const data = await res.json();
+        if (data.error) message = data.error;
+      } catch (e) {
+        // response wasn't JSON — keep the generic message
+      }
+      throw new Error(message);
+    }
+
+    const blob = await res.blob();
+    let filename = "ISO27001_Airlock_Report.html";
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^";]+)"?/);
+    if (match) filename = match[1];
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    isoSetStatus("success", `Downloaded ${escapeHtml(filename)}.`);
+  } catch (err) {
+    isoSetStatus("failure", `Couldn't generate report: ${escapeHtml(String(err))}`);
+  } finally {
+    isoDownloadBtn.disabled = false;
+    isoDownloadBtn.textContent = "Download HTML report";
+  }
+}
+
+isoDownloadBtn.addEventListener("click", isoDownloadReport);
+
+function initIso27001Tab() {
+  if (isoInitialized) return;
+  isoInitialized = true;
+  isoLoadControlsSummary();
+}
+
+// --- Custom Widgets: Partner Engagement Report ---
+const partnerBaseDomainInput = document.getElementById("partner-base-domain");
+const partnerAdminKeyInput = document.getElementById("partner-admin-key");
+const partnerSaveConfigBtn = document.getElementById("partner-save-config");
+const partnerCopyKeyBtn = document.getElementById("partner-copy-key");
+const partnerConfigStatusEl = document.getElementById("partner-config-status");
+const partnerTenantsListEl = document.getElementById("partner-tenants-list");
+const partnerTenantsDetailsEl = document.getElementById("partner-tenants-details");
+const partnerTenantsSummaryEl = document.getElementById("partner-tenants-summary");
+const partnerSelectAllBtn = document.getElementById("partner-select-all");
+const partnerSelectNoneBtn = document.getElementById("partner-select-none");
+const partnerNewLabelInput = document.getElementById("partner-new-label");
+const partnerNewTenantIdInput = document.getElementById("partner-new-tenant-id");
+const partnerNewDirectoryIdInput = document.getElementById("partner-new-directory-id");
+const partnerAddTenantBtn = document.getElementById("partner-add-tenant");
+const partnerAddTenantStatusEl = document.getElementById("partner-add-tenant-status");
+const partnerGenerateReportBtn = document.getElementById("partner-generate-report");
+const partnerExportXlsxBtn = document.getElementById("partner-export-xlsx");
+const partnerExportXmlBtn = document.getElementById("partner-export-xml");
+const partnerStatusEl = document.getElementById("status-panel-partner");
+const partnerStatusTextEl = document.getElementById("status-panel-partner-text");
+
+let partnerInitialized = false;
+let partnerTenantsEverLoaded = false;
+
+function partnerSetStatus(kind, htmlContent) {
+  partnerStatusEl.className = `status-panel ${kind}`;
+  partnerStatusTextEl.innerHTML = htmlContent;
+}
+
+async function partnerLoadConfig() {
+  try {
+    const res = await fetch("/cloud/config");
+    const data = await res.json();
+    partnerBaseDomainInput.value = data.base_domain || "";
+    if (data.has_key) {
+      partnerAdminKeyInput.placeholder = `Saved key: ${data.key_preview}`;
+    }
+  } catch (err) {
+    partnerConfigStatusEl.className = "field-status failure";
+    partnerConfigStatusEl.textContent = `Request failed: ${err}`;
+  }
+}
+
+partnerSaveConfigBtn.addEventListener("click", async () => {
+  const baseDomain = partnerBaseDomainInput.value.trim();
+  const apiKey = partnerAdminKeyInput.value.trim();
+
+  partnerSaveConfigBtn.disabled = true;
+  try {
+    const res = await fetch("/cloud/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base_domain: baseDomain, api_key: apiKey || undefined }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      partnerConfigStatusEl.className = "field-status success";
+      partnerConfigStatusEl.textContent = "Saved.";
+      if (apiKey) {
+        partnerAdminKeyInput.value = "";
+        partnerAdminKeyInput.placeholder = `Saved key: ${data.key_preview}`;
+      }
+    } else {
+      partnerConfigStatusEl.className = "field-status failure";
+      partnerConfigStatusEl.textContent = data.error || "Failed to save.";
+    }
+  } catch (err) {
+    partnerConfigStatusEl.className = "field-status failure";
+    partnerConfigStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    partnerSaveConfigBtn.disabled = false;
+  }
+});
+
+partnerCopyKeyBtn.addEventListener("click", async () => {
+  try {
+    const res = await fetch("/cloud/config/reveal", { method: "POST" });
+    const data = await res.json();
+    if (!data.value) {
+      partnerConfigStatusEl.className = "field-status failure";
+      partnerConfigStatusEl.textContent = data.error || "No saved key to copy.";
+      return;
+    }
+    await navigator.clipboard.writeText(data.value);
+    partnerConfigStatusEl.className = "field-status success";
+    partnerConfigStatusEl.textContent = "Copied to clipboard.";
+    const original = partnerCopyKeyBtn.textContent;
+    partnerCopyKeyBtn.textContent = "Copied!";
+    setTimeout(() => { partnerCopyKeyBtn.textContent = original; }, 1500);
+  } catch (err) {
+    partnerConfigStatusEl.className = "field-status failure";
+    partnerConfigStatusEl.textContent = `Request failed: ${err}`;
+  }
+});
+
+function partnerGetSelectedIds() {
+  return Array.from(partnerTenantsListEl.querySelectorAll(".partner-tenant-checkbox:checked")).map((cb) => cb.value);
+}
+
+let partnerTenantsTotal = 0;
+
+// Keeps the collapsed summary line current (tenant count + how many are
+// selected) so you can tell what's selected without opening the list.
+function partnerUpdateSummary() {
+  if (partnerTenantsTotal === 0) {
+    partnerTenantsSummaryEl.textContent = "No partner tenants added yet.";
+    return;
+  }
+  const selectedCount = partnerGetSelectedIds().length;
+  const tenantWord = partnerTenantsTotal === 1 ? "tenant" : "tenants";
+  partnerTenantsSummaryEl.textContent = `${partnerTenantsTotal} ${tenantWord} — ${selectedCount} selected`;
+}
+
+async function partnerLoadTenants() {
+  const previouslySelected = new Set(partnerGetSelectedIds());
+  const isFirstLoad = !partnerTenantsEverLoaded;
+  partnerTenantsEverLoaded = true;
+
+  partnerTenantsListEl.textContent = "Loading…";
+  partnerTenantsSummaryEl.textContent = "Loading…";
+  try {
+    const res = await fetch("/cloud/tenants");
+    const data = await res.json();
+    const tenants = data.tenants || [];
+    partnerTenantsTotal = tenants.length;
+
+    if (tenants.length === 0) {
+      partnerTenantsListEl.innerHTML = `<p class="hint">No partner tenants added yet.</p>`;
+      partnerUpdateSummary();
+      return;
+    }
+
+    partnerTenantsListEl.innerHTML = tenants
+      .map((t) => {
+        // Default new tenants (and the very first load) to checked, but
+        // respect whatever the user had selected across a reload.
+        const checked = isFirstLoad || previouslySelected.has(t.id) ? "checked" : "";
+        return `
+        <div class="partner-tenant-card">
+          <input type="checkbox" class="partner-tenant-checkbox" value="${escapeHtml(t.id)}" ${checked}>
+          <div class="partner-tenant-info">
+            <div class="partner-tenant-name">${escapeHtml(t.label)}</div>
+            <div class="partner-tenant-meta">Tenant: ${escapeHtml(t.tenant_id)}</div>
+            <div class="partner-tenant-meta">Directory: ${escapeHtml(t.directory_id)}</div>
+          </div>
+          <button class="secondary partner-delete-tenant-btn" type="button" data-id="${escapeHtml(t.id)}" data-label="${escapeHtml(t.label)}">Remove</button>
+        </div>`;
+      })
+      .join("");
+
+    partnerTenantsListEl.querySelectorAll(".partner-delete-tenant-btn").forEach((btn) => {
+      btn.addEventListener("click", () => partnerDeleteTenant(btn.dataset.id, btn.dataset.label));
+    });
+    partnerUpdateSummary();
+  } catch (err) {
+    partnerTenantsListEl.textContent = `Request failed: ${err}`;
+    partnerTenantsSummaryEl.textContent = "Couldn't load tenants";
+  }
+}
+
+// Event delegation so newly-rendered checkboxes are covered without
+// re-binding a listener per card every time the list reloads.
+partnerTenantsListEl.addEventListener("change", (e) => {
+  if (e.target.classList.contains("partner-tenant-checkbox")) partnerUpdateSummary();
+});
+
+async function partnerDeleteTenant(id, label) {
+  if (!confirm(`Remove ${label} from the partner tenant list?`)) return;
+  try {
+    const res = await fetch("/cloud/tenants/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      partnerLoadTenants();
+    } else {
+      alert(data.error || "Failed to remove tenant.");
+    }
+  } catch (err) {
+    alert(`Request failed: ${err}`);
+  }
+}
+
+partnerAddTenantBtn.addEventListener("click", async () => {
+  const label = partnerNewLabelInput.value.trim();
+  const tenantId = partnerNewTenantIdInput.value.trim();
+  const directoryId = partnerNewDirectoryIdInput.value.trim();
+
+  if (!label || !tenantId || !directoryId) {
+    partnerAddTenantStatusEl.className = "field-status failure";
+    partnerAddTenantStatusEl.textContent = "Label, Tenant ID, and Directory ID are all required.";
+    return;
+  }
+
+  partnerAddTenantBtn.disabled = true;
+  try {
+    const res = await fetch("/cloud/tenants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, tenant_id: tenantId, directory_id: directoryId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      partnerAddTenantStatusEl.className = "field-status success";
+      partnerAddTenantStatusEl.textContent = `Added "${label}".`;
+      partnerNewLabelInput.value = "";
+      partnerNewTenantIdInput.value = "";
+      partnerNewDirectoryIdInput.value = "";
+      partnerLoadTenants();
+    } else {
+      partnerAddTenantStatusEl.className = "field-status failure";
+      partnerAddTenantStatusEl.textContent = data.error || "Failed to add tenant.";
+    }
+  } catch (err) {
+    partnerAddTenantStatusEl.className = "field-status failure";
+    partnerAddTenantStatusEl.textContent = `Request failed: ${err}`;
+  } finally {
+    partnerAddTenantBtn.disabled = false;
+  }
+});
+
+partnerSelectAllBtn.addEventListener("click", () => {
+  partnerTenantsListEl.querySelectorAll(".partner-tenant-checkbox").forEach((cb) => (cb.checked = true));
+  partnerUpdateSummary();
+});
+partnerSelectNoneBtn.addEventListener("click", () => {
+  partnerTenantsListEl.querySelectorAll(".partner-tenant-checkbox").forEach((cb) => (cb.checked = false));
+  partnerUpdateSummary();
+});
+
+async function partnerGenerateReport() {
+  const selectedIds = partnerGetSelectedIds();
+  if (selectedIds.length === 0) {
+    partnerSetStatus("failure", "Select at least one tenant to include in the report.");
+    return;
+  }
+
+  partnerGenerateReportBtn.disabled = true;
+  partnerGenerateReportBtn.textContent = "Generating…";
+  partnerSetStatus(
+    "pending",
+    `Pulling data from ${selectedIds.length} selected tenant(s) — this can take a couple of minutes depending on how many you've chosen. The report will open once it's ready.`
+  );
+
+  try {
+    const res = await fetch("/cloud/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenant_ids: selectedIds }),
+    });
+
+    if (!res.ok) {
+      let message = `Request failed (status ${res.status})`;
+      try {
+        const data = await res.json();
+        if (data.error) message = data.error;
+      } catch (e) {
+        // response wasn't JSON — keep the generic message
+      }
+      partnerSetStatus("failure", escapeHtml(message));
+      return;
+    }
+
+    // Only open the tab once the report is actually ready — no blank
+    // page to stare at while data is still being pulled.
+    const htmlText = await res.text();
+    const blob = new Blob([htmlText], { type: "text/html" });
+    const url = window.URL.createObjectURL(blob);
+    const newTab = window.open(url, "_blank");
+
+    if (newTab) {
+      partnerSetStatus("success", "Report generated and opened in a new tab.");
+    } else {
+      partnerSetStatus(
+        "success",
+        `Report generated. Your browser blocked the automatic popup — <a href="${url}" target="_blank">click here to open it</a>.`
+      );
+    }
+  } catch (err) {
+    partnerSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    partnerGenerateReportBtn.disabled = false;
+    partnerGenerateReportBtn.textContent = "Generate report";
+  }
+}
+
+partnerGenerateReportBtn.addEventListener("click", partnerGenerateReport);
+
+async function partnerExportReport(format) {
+  const selectedIds = partnerGetSelectedIds();
+  if (selectedIds.length === 0) {
+    partnerSetStatus("failure", "Select at least one tenant to include in the export.");
+    return;
+  }
+
+  const btn = format === "xlsx" ? partnerExportXlsxBtn : partnerExportXmlBtn;
+  const formatLabel = format === "xlsx" ? "Excel" : "XML";
+  const originalText = btn.textContent;
+
+  btn.disabled = true;
+  btn.textContent = "Exporting…";
+  partnerSetStatus(
+    "pending",
+    `Pulling data from ${selectedIds.length} selected tenant(s) for the ${formatLabel} export — this can take a couple of minutes depending on how many you've chosen.`
+  );
+
+  try {
+    const res = await fetch(`/cloud/report/export/${format}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenant_ids: selectedIds }),
+    });
+
+    if (!res.ok) {
+      let message = `Request failed (status ${res.status})`;
+      try {
+        const data = await res.json();
+        if (data.error) message = data.error;
+      } catch (e) {
+        // response wasn't JSON — keep the generic message
+      }
+      partnerSetStatus("failure", escapeHtml(message));
+      return;
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : `partner_report.${format}`;
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    partnerSetStatus("success", `${formatLabel} export downloaded (${escapeHtml(filename)}).`);
+  } catch (err) {
+    partnerSetStatus("failure", `Request failed: ${escapeHtml(String(err))}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+partnerExportXlsxBtn.addEventListener("click", () => partnerExportReport("xlsx"));
+partnerExportXmlBtn.addEventListener("click", () => partnerExportReport("xml"));
+
+function initPartnerReportTab() {
+  if (partnerInitialized) return;
+  partnerInitialized = true;
+  partnerLoadConfig();
+  partnerLoadTenants();
+}
+
+// --- Shared: called whenever the active Airlock connection changes,
+// from wherever it was switched (Settings tab, Scripts tab, or any
+// future picker). Widgets that pull connection-specific data (group
+// lists, assessment results) cache it after their first load for
+// speed, so without this they'd keep silently showing data from
+// whichever connection was active when they were first opened.
+function onAirlockConnectionChanged() {
+  if (tamInitialized) {
+    // Old selections/agent list belong to the previous connection's
+    // groups and are no longer meaningful — clear them before refetching.
+    tamAllGroups = [];
+    tamCurrentAgents = [];
+    tamSourceFilterInput.value = "";
+    tamDestFilterInput.value = "";
+    tamAgentList.innerHTML = "";
+    tamAgentsHint.textContent = "Select a source group to load its agents.";
+    tamSetStatus("idle", "Connection changed — group list refreshed below.");
+    tamLoadGroups();
+  }
+
+  if (isoInitialized) {
+    isoResultsEl.innerHTML = "";
+    isoSetStatus("idle", "Connection changed — click \u201cRun assessment\u201d to see results for the new connection.");
+  }
+}
+
+loadSettings();
+loadAirlockProfiles();
+</script>
+
+</body>
+</html>

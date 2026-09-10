@@ -1,0 +1,118 @@
+{
+  "_readme": "Editable reference mapping ISO/IEC 27001:2022 Annex A controls to Airlock Digital policy configuration. Edit descriptions, add/remove controls, or tune rule thresholds per client engagement. Controls with rule type 'manual' are not yet backed by a confirmed Airlock field and will show as 'unknown' in reports until a real rule is defined.",
+
+  "controls": [
+    {
+      "id": "a8.7",
+      "title": "A.8.7",
+      "name": "Protection against malware",
+      "theme": "Technological",
+      "description": "Detection, prevention, and recovery controls against malware. Application allowlisting combined with active blocklisting of known-bad software provides layered evidence for this control.",
+      "rule": {
+        "type": "all_of",
+        "rules": [
+          {
+            "type": "field_equals",
+            "field": "auditmode",
+            "pass_value": 0,
+            "partial_value": 1
+          },
+          {
+            "type": "list_any_match",
+            "field": "blocklists",
+            "item_field": "audit",
+            "match_value": 0,
+            "min_count": 1,
+            "empty_status": "unmet"
+          }
+        ]
+      }
+    },
+    {
+      "id": "a8.8",
+      "title": "A.8.8",
+      "name": "Management of technical vulnerabilities",
+      "theme": "Technological",
+      "description": "MANUAL — not yet backed by a confirmed Airlock field. Needs input on what signal(s) in the policy response (if any) indicate vulnerability-management posture, e.g. hash database currency, or targeted blocking of known-vulnerable software.",
+      "rule": {
+        "type": "manual"
+      }
+    },
+    {
+      "id": "a8.9",
+      "title": "A.8.9",
+      "name": "Configuration management",
+      "theme": "Technological",
+      "description": "DRAFT — please confirm. Currently checks only whether the group avoids ad hoc trust overrides (trusted_config) that bypass the normal managed policy. This is a narrow proxy, not a full configuration-management assessment — open to a better signal if one exists.",
+      "rule": {
+        "type": "field_equals",
+        "field": "trusted_config",
+        "pass_value": false
+      }
+    },
+    {
+      "id": "a8.12",
+      "title": "A.8.12",
+      "name": "Data leakage prevention",
+      "theme": "Technological",
+      "description": "MANUAL — not yet backed by a confirmed Airlock field. Needs input on what signal(s) in the policy response (if any) map to DLP, since this isn't obviously covered by core application allowlisting.",
+      "rule": {
+        "type": "manual"
+      }
+    },
+    {
+      "id": "a8.15",
+      "title": "A.8.15",
+      "name": "Logging",
+      "theme": "Technological",
+      "description": "MANUAL — not yet backed by a confirmed Airlock field. Needs input on which field (if any) reflects whether execution logging is actually enabled/active for a group, versus just notification settings.",
+      "rule": {
+        "type": "manual"
+      }
+    },
+    {
+      "id": "a8.19",
+      "title": "A.8.19",
+      "name": "Installation of software on operational systems",
+      "theme": "Technological",
+      "description": "Restricting what software can be installed and executed on operational systems. Airlock's core application allowlisting capability maps directly to this control: a group actively enforcing (not just auditing) is providing real preventive evidence, not just visibility.",
+      "rule": {
+        "type": "field_equals",
+        "field": "auditmode",
+        "pass_value": 0,
+        "partial_value": 1
+      }
+    }
+  ],
+
+  "evidence_only_fields": [
+    "script_enabled",
+    "cmdline_enabled",
+    "selfservice",
+    "trusted_upload",
+    "airlocktrustedinstaller",
+    "mactrustedinstaller",
+    "mitrustedinstaller",
+    "pslockdown",
+    "policyver",
+    "hashdb_ver",
+    "poll_time"
+  ],
+
+  "script_vector_fields": [
+    "batch",
+    "command",
+    "powershell",
+    "vbscript",
+    "javascript",
+    "windowsinstaller",
+    "htmlapplication",
+    "javaapplication",
+    "windowsscriptcomponent",
+    "python",
+    "compiledhtml",
+    "shellscript",
+    "dylib",
+    "scpt"
+  ]
+}
